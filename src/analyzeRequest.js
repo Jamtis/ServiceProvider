@@ -20,7 +20,7 @@ export default async request => {
         query_parameters[parameter] = decodeURIComponent(query_parameters[parameter]);
     }
     let body_parameters = {};
-        // console.log("analyzeRequest::parse", data);
+        console.log("analyzeRequest::parse", data);
     try {
         body_parameters = JSON.parse(data);
         // console.log("analyzeRequest::parse", body_parameters);

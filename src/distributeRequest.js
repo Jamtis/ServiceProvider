@@ -5,6 +5,7 @@ export default async ({allowedOrigin = "*"}, service_wrapper, request, response)
         response.setHeader("Access-Control-Allow-Origin", allowedOrigin);
         response.setHeader("Content-Type", "application/json; charset=utf-8");
         const request_data = await analyzeRequest(request);
+        console.log("receive raw request", request_data);
         if (!request_data.accepted) {
             response.writeHead(406, {
                 Accept: ["application/json"]
