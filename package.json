@@ -1,0 +1,29 @@
+{
+    "name": "service-provider",
+    "version": "0.0.0",
+    "description": "Creates a http-server distributing requests to configured service functions.",
+    "main": "build/createServiceProvider.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/jamtis/ServiceProvider.git"
+    },
+    "author": "Nicholas-Philip Brandt",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/jamtis/ServiceProvider/issues"
+    },
+    "homepage": "https://github.com/jamtis/ServiceProvider#readme",
+    "dependencies": {
+        "babel-core": "^6.26.3",
+        "gulp": "^3.9.1",
+        "gulp-cli": "^2.0.1"
+    },
+    "devDependencies": {
+        "babel-preset-env": "^1.7.0",
+        "gulp-babel": "^7.0.1",
+        "gulp-watch": "^4.3.11"
+    }
+}

@@ -1,0 +1,24 @@
+{
+    "bundles": {
+        "app": {
+            "scripts": {
+                "src": "src/**/*.js",
+                "dest": "build",
+                "chain": ["gulp-babel"],
+                "watch": false
+            }
+        }
+    },
+    "modules": {
+        "gulp-babel": {
+            "presets": [
+                ["env", {
+                    "targets": {
+                        "node": "current"
+                    }
+                }]
+            ]
+        },
+        "babel-preset-env": {}
+    }
+}
