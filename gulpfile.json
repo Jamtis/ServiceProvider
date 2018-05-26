@@ -7,6 +7,14 @@
                 "chain": ["gulp-babel"],
                 "watch": false
             }
+        },
+        "testing": {
+            "mocha": {
+                "src": "test_src/*.js",
+                "dest": "test",
+                "chain": ["gulp-babel", "gulp-beautify-code"],
+                "watch": false
+            }
         }
     },
     "modules": {
@@ -19,6 +27,7 @@
                 }]
             ]
         },
-        "babel-preset-env": {}
+        "babel-preset-env": {},
+        "gulp-beautify-code": {}
     }
 }

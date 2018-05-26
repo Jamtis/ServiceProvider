@@ -1,10 +1,20 @@
 {
-    "name": "service-provider",
-    "version": "0.0.0",
-    "description": "Creates a http-server distributing requests to configured service functions.",
-    "main": "build/createServiceProvider.js",
+    "name": "serviceprovider",
+    "version": "1.0.0",
+    "description": "NodeJS server setup providing script functionality per manifest file",
+    "main": "gulpfile.js",
+    "devDependencies": {
+        "babel-core": "^6.26.3",
+        "babel-preset-env": "^1.7.0",
+        "gulp": "^4.0.0",
+        "gulp-babel": "^7.0.1",
+        "gulp-beautify-code": "^2.0.3",
+        "gulp-watch": "^5.0.0",
+        "mocha": "^5.2.0",
+        "stackup": "^1.0.2"
+    },
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "test": "mocha"
     },
     "repository": {
         "type": "git",
@@ -16,14 +26,5 @@
         "url": "https://github.com/jamtis/ServiceProvider/issues"
     },
     "homepage": "https://github.com/jamtis/ServiceProvider#readme",
-    "dependencies": {
-        "babel-core": "^6.26.3",
-        "gulp": "^3.9.1",
-        "gulp-cli": "^2.0.1"
-    },
-    "devDependencies": {
-        "babel-preset-env": "^1.7.0",
-        "gulp-babel": "^7.0.1",
-        "gulp-watch": "^4.3.11"
-    }
+    "dependencies": {}
 }

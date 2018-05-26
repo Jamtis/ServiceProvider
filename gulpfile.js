@@ -30,7 +30,7 @@ for (const bundle in bundles) {
             console.error(e);
         }
     }
-    gulp.task(bundle, Object.getOwnPropertyNames(tasks));
+    gulp.task(bundle, gulp.parallel(Object.getOwnPropertyNames(tasks)));
     gulp.task("init-" + bundle, () => new Promise((resolve, reject) => {
         exec("npm install --save-dev gulp-watch " + Object.getOwnPropertyNames(modules).join(" "), error => {
             (error ? reject : resolve)();
@@ -39,6 +39,6 @@ for (const bundle in bundles) {
 }
 {
     const bundle_array = Object.getOwnPropertyNames(bundles);
-    gulp.task("default", bundle_array);
-    gulp.task("init", bundle_array.map(bundle => "init-" + bundle));
+    gulp.task("default", gulp.parallel(bundle_array));
+    gulp.task("init", gulp.parallel(bundle_array.map(bundle => "init-" + bundle)));
 }
