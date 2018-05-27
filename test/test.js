@@ -1,5 +1,7 @@
 "use strict";
 
+var _assert = require("assert");
+
 var _ServiceProvider = require("../build/ServiceProvider.js");
 
 var _ServiceProvider2 = _interopRequireDefault(_ServiceProvider);
@@ -37,22 +39,22 @@ function _interopRequireDefault(obj) {
     };
 }
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-
 const options = {
-    key: _fs2.default.readFileSync("test/certificate/key.pem"),
-    cert: _fs2.default.readFileSync("test/certificate/certificate.pem"),
+    key: _fs2.default.readFileSync("test/certificate/root-ca.key"),
+    passphrase: "password",
+    cert: _fs2.default.readFileSync("test/certificate/root-ca.crt"),
+    ca: _fs2.default.readFileSync("test/certificate/root-ca.crt"),
     allowHTTP1: true,
     enablePush: true
-};
+}; // process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
 const test_port = 9600;
 describe("Server setup", () => {
     const service_provider = new _ServiceProvider2.default(service_manifest);
     console.log("start server");
     const server = service_provider.startServer(test_port, options);
-    // TODO: create CA instead of TLS_REJECT_UNAUTHORIZED
     const client = _http2.default.connect("https://localhost:" + test_port, {
-        // ca: fs.readFileSync('certificate/cert.pem')
+        ca: _fs2.default.readFileSync("test/certificate/root-ca.crt")
     });
     client.on("error", error => console.error(error));
     describe("METHOD handling", () => {
@@ -61,16 +63,18 @@ describe("Server setup", () => {
                 ":method": "OPTIONS"
             });
             request.setEncoding("utf8");
-            request.on("response", (headers, flags) => {
-                console.log("server response headers", headers);
-                // console.log("flags", flags);
+            request.on("response", headers => {
+                // console.log("server response headers", headers);
+                _assert.strict.equal(headers[":status"], 200, "Status not OK");
+                _assert.strict.equal(headers["access-control-allow-methods"], "POST,OPTIONS");
+                // done();
             });
             let data = "";
             request.on("data", chunk => {
                 data += chunk;
             });
             request.on("end", () => {
-                console.log("response body:", data);
+                // console.log("request end", data);
                 done();
             });
             request.end();
@@ -80,19 +84,46 @@ describe("Server setup", () => {
                 ":method": "POST"
             });
             request.setEncoding("utf8");
-            request.on("response", (headers, flags) => {
-                console.log("server response headers", headers);
-                // console.log("flags", flags);
+            request.on("response", headers => {
+                // console.log("server response headers", headers);
+                _assert.strict.equal(headers[":status"], 200, "Status not OK");
+            }); {
+                let data = "";
+                request.on("data", chunk => {
+                    data += chunk;
+                });
+                request.on("end", () => {
+                    // console.log("request end", data);
+                    _assert.strict.equal(data, "{}");
+                    done();
+                });
+            }
+            request.end();
+        });
+        it("POST test function", done => {
+            const request = client.request({
+                ":method": "POST"
             });
-            let data = "";
-            request.on("data", chunk => {
-                data += chunk;
-            });
-            request.on("end", () => {
-                console.log("response body:", data);
-                done();
-            });
-            console.log("write body");
+            request.setEncoding("utf8");
+            let status_200;
+            request.on("response", headers => {
+                // console.log("server response headers", headers);
+                _assert.strict.equal(headers[":status"], 200, "Status not OK");
+            }); {
+                let data = "";
+                request.on("data", chunk => {
+                    data += chunk;
+                });
+                request.on("end", () => {
+                    // console.log("request end", data);
+                    const {
+                        test_function
+                    } = JSON.parse(data);
+                    _assert.strict.equal(test_function.status, 200);
+                    _assert.strict.equal(test_function.value, 42);
+                    done();
+                });
+            }
             request.write(JSON.stringify({
                 test_function: [3, 39]
             }));
@@ -101,5 +132,6 @@ describe("Server setup", () => {
     });
     after(() => {
         client.close();
+        server.close();
     });
 });
