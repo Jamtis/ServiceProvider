@@ -18,6 +18,10 @@ var _http = require("http2");
 
 var _http2 = _interopRequireDefault(_http);
 
+var _https = require("https");
+
+var _https2 = _interopRequireDefault(_https);
+
 function _interopRequireWildcard(obj) {
     if (obj && obj.__esModule) {
         return obj;
@@ -39,25 +43,27 @@ function _interopRequireDefault(obj) {
     };
 }
 
+// process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 const options = {
     key: _fs2.default.readFileSync("test/certificate/root-ca.key"),
     passphrase: "password",
     cert: _fs2.default.readFileSync("test/certificate/root-ca.crt"),
-    ca: _fs2.default.readFileSync("test/certificate/root-ca.crt"),
+    // ca: fs.readFileSync("test/certificate/root-ca.crt"),
     allowHTTP1: true,
     enablePush: true
-}; // process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-
+};
 const test_port = 9600;
 describe("Server setup", () => {
-    const service_provider = new _ServiceProvider2.default(service_manifest);
+    const service_provider = new _ServiceProvider2.default(service_manifest, {
+        logging: false
+    });
     // console.log("start server");
     const server = service_provider.startServer(test_port, options);
     const client = _http2.default.connect("https://localhost:" + test_port, {
         ca: _fs2.default.readFileSync("test/certificate/root-ca.crt")
     });
     client.on("error", error => {
-        console.error(error);
+        _assert.strict.fail(error.message);
     });
     describe("METHOD handling", () => {
         it("OPTIONS handling", done => {
@@ -88,7 +94,7 @@ describe("Server setup", () => {
             request.setEncoding("utf8");
             request.on("response", headers => {
                 // console.log("server response headers", headers);
-                _assert.strict.equal(headers[":status"], 200, "Status not OK");
+                _assert.strict.equal(headers[":status"], 200);
             }); {
                 let data = "";
                 request.on("data", chunk => {
@@ -109,7 +115,7 @@ describe("Server setup", () => {
             request.setEncoding("utf8");
             request.on("response", headers => {
                 // console.log("server response headers", headers);
-                _assert.strict.equal(headers[":status"], 200, "Status not OK");
+                _assert.strict.equal(headers[":status"], 200);
             }); {
                 let data = "";
                 request.on("data", chunk => {
@@ -138,6 +144,21 @@ describe("Server setup", () => {
             unauthorized_client.on("error", error => {;
                 _assert.strict.equal(error.message, "self signed certificate");
                 _assert.strict.equal(error.code, "DEPTH_ZERO_SELF_SIGNED_CERT");
+                done();
+            });
+        });
+    });
+    describe("Compatibility", () => {
+        it("HTTP1 supported", done => {
+            const options = {
+                hostname: "localhost",
+                port: test_port,
+                path: "/",
+                method: "POST",
+                ca: _fs2.default.readFileSync("test/certificate/root-ca.crt")
+            };
+            _https2.default.get(options, response => {
+                _assert.strict.equal(response.statusCode, 200);
                 done();
             });
         });

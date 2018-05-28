@@ -2,19 +2,22 @@ import url from "url";
 import querystring from "querystring";
 
 export default class ServiceProvider {
-    constructor(service_manifest) {
+    constructor(service_manifest, options = {}) {
         Object.defineProperties(this, {
             service_manifest: {
                 value: service_manifest,
                 enumerable: true
             }
         });
+        this.logging = options.logging;
     }
     async handleRequest(request, response) {
         try {
             // analyze request
             const request_data = await this.analyzeRequest(request);
-            // console.log("request analyzed", request_data);
+            if (this.logging) {
+                console.log("request analyzed", request_data);
+            }
             // check validity
             if (this.checkRequest(request_data, response)) {
                 // console.log("going to invoke sf");
@@ -140,7 +143,9 @@ export default class ServiceProvider {
     checkRequest(request_data, response) {
         switch (request_data.method) {
             case "POST":
-                console.log("\x1b[32m", "Check", request_data.method, "request", request_data.pathname, "\x1b[0m");
+                if (this.logging) {
+                    console.log("\x1b[32m", "Check", request_data.method, "request", request_data.pathname, "\x1b[0m");
+                }
                 // console.log("request headers", request.headers);
                 if (request_data.accepted) {
                     return true;
@@ -150,7 +155,9 @@ export default class ServiceProvider {
                 });
                 break;
             case "OPTIONS":
-                console.log("\x1b[35m", "Detected", request_data.method, "request", "\x1b[0m");
+                if (this.logging) {
+                    console.log("\x1b[35m", "Detected", request_data.method, "request", "\x1b[0m");
+                }
                 response.writeHead(200, {
                     "Access-Control-Request-Methods": "OPTIONS",
                     "Access-Control-Allow-Methods": "POST,OPTIONS",
@@ -166,7 +173,7 @@ export default class ServiceProvider {
     startServer(port, options) {
         const http2 = require("http2");
         if (!options.pfx && (!options.cert || !options.key)) {
-            console.warn("insufficient security provided; not using https");
+            console.warn("insufficient security provided; not using https", options);
             const server = http2.createServer(options, this.handleRequest.bind(this));
             server.listen(port || 9600);
             return server;

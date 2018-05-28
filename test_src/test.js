@@ -4,24 +4,25 @@ import ServiceProvider from "../build/ServiceProvider.js";
 import * as service_manifest from "./service_manifest.js";
 import fs from "fs";
 import http2 from "http2";
+import https from "https";
 const options = {
     key: fs.readFileSync("test/certificate/root-ca.key"),
     passphrase: "password",
     cert: fs.readFileSync("test/certificate/root-ca.crt"),
-    ca: fs.readFileSync("test/certificate/root-ca.crt"),
+    // ca: fs.readFileSync("test/certificate/root-ca.crt"),
     allowHTTP1: true,
     enablePush: true
 };
 const test_port = 9600;
 describe("Server setup", () => {
-    const service_provider = new ServiceProvider(service_manifest);
+    const service_provider = new ServiceProvider(service_manifest, {logging: false});
     // console.log("start server");
     const server = service_provider.startServer(test_port, options);
     const client = http2.connect("https://localhost:" + test_port, {
         ca: fs.readFileSync("test/certificate/root-ca.crt")
     });
     client.on("error", error => {
-        console.error(error)
+        assert.fail(error.message);
     });
     describe("METHOD handling", () => {
         it("OPTIONS handling", done => {
@@ -52,7 +53,7 @@ describe("Server setup", () => {
             request.setEncoding("utf8");
             request.on("response", headers => {
                 // console.log("server response headers", headers);
-                assert.equal(headers[":status"], 200, "Status not OK");
+                assert.equal(headers[":status"], 200);
             });
             {
                 let data = "";
@@ -74,7 +75,7 @@ describe("Server setup", () => {
             request.setEncoding("utf8");
             request.on("response", headers => {
                 // console.log("server response headers", headers);
-                assert.equal(headers[":status"], 200, "Status not OK");
+                assert.equal(headers[":status"], 200);
             });
             {
                 let data = "";
@@ -102,6 +103,21 @@ describe("Server setup", () => {
             unauthorized_client.on("error", error => {;
                 assert.equal(error.message, "self signed certificate");
                 assert.equal(error.code, "DEPTH_ZERO_SELF_SIGNED_CERT");
+                done();
+            });
+        });
+    });
+    describe("Compatibility", () => {
+        it("HTTP1 supported", done => {
+            const options = {
+                hostname: "localhost",
+                port: test_port,
+                path: "/",
+                method: "POST",
+                ca: fs.readFileSync("test/certificate/root-ca.crt")
+            };
+            https.get(options, response => {
+                assert.equal(response.statusCode, 200);
                 done();
             });
         });
