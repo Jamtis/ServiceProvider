@@ -12,7 +12,6 @@ describe("HTTP setup", () => {
     };
     const test_port = 9601;
     const service_provider = new ServiceProvider(service_manifest, {logging: false});
-    // console.log("start server");
     const server = service_provider.startServer(test_port, options);
     server.on("error", error => {
         assert.fail(error.message);
@@ -117,20 +116,21 @@ describe("HTTP setup", () => {
     });
 });
 describe("HTTPS setup", () => {
+    const key = fs.readFileSync("test/certificate/root-ca.key");
+    const cert = fs.readFileSync("test/certificate/root-ca.crt");
     const options = {
-        key: fs.readFileSync("test/certificate/root-ca.key"),
+        key,
         passphrase: "password",
-        cert: fs.readFileSync("test/certificate/root-ca.crt"),
-        // ca: fs.readFileSync("test/certificate/root-ca.crt"),
+        cert,
+        // ca: cert,
         allowHTTP1: true,
         enablePush: true
     };
     const test_port = 9600;
     const service_provider = new ServiceProvider(service_manifest, {logging: false});
-    // console.log("start server");
     const server = service_provider.startServer(test_port, options);
     const client = http2.connect("https://localhost:" + test_port, {
-        ca: fs.readFileSync("test/certificate/root-ca.crt")
+        ca: cert
     });
     client.on("error", error => {
         assert.fail(error.message);
@@ -208,16 +208,6 @@ describe("HTTPS setup", () => {
             request.end();
         });
     });
-    describe("Security", () => {
-        it("Certificate required", done => {
-            const unauthorized_client = http2.connect("https://localhost:" + test_port, {});
-            unauthorized_client.on("error", error => {;
-                assert.equal(error.message, "self signed certificate");
-                assert.equal(error.code, "DEPTH_ZERO_SELF_SIGNED_CERT");
-                done();
-            });
-        });
-    });
     describe("Compatibility", () => {
         it("HTTP1 supported", done => {
             const options = {
@@ -244,6 +234,16 @@ describe("HTTPS setup", () => {
             });
             request.write("{}");
             request.end();
+        });
+    });
+    describe("Security", () => {
+        it("Certificate required", done => {
+            const unauthorized_client = http2.connect("https://localhost:" + test_port, {});
+            unauthorized_client.on("error", error => {
+                assert.equal(error.message, "self signed certificate");
+                assert.equal(error.code, "DEPTH_ZERO_SELF_SIGNED_CERT");
+                done();
+            });
         });
     });
     after(() => {

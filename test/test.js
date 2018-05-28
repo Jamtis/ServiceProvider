@@ -56,7 +56,6 @@ describe("HTTP setup", () => {
     const service_provider = new _ServiceProvider2.default(service_manifest, {
         logging: false
     });
-    // console.log("start server");
     const server = service_provider.startServer(test_port, options);
     server.on("error", error => {
         _assert.strict.fail(error.message);
@@ -161,11 +160,13 @@ describe("HTTP setup", () => {
     });
 });
 describe("HTTPS setup", () => {
+    const key = _fs2.default.readFileSync("test/certificate/root-ca.key");
+    const cert = _fs2.default.readFileSync("test/certificate/root-ca.crt");
     const options = {
-        key: _fs2.default.readFileSync("test/certificate/root-ca.key"),
+        key,
         passphrase: "password",
-        cert: _fs2.default.readFileSync("test/certificate/root-ca.crt"),
-        // ca: fs.readFileSync("test/certificate/root-ca.crt"),
+        cert,
+        // ca: cert,
         allowHTTP1: true,
         enablePush: true
     };
@@ -173,10 +174,9 @@ describe("HTTPS setup", () => {
     const service_provider = new _ServiceProvider2.default(service_manifest, {
         logging: false
     });
-    // console.log("start server");
     const server = service_provider.startServer(test_port, options);
     const client = _http2.default.connect("https://localhost:" + test_port, {
-        ca: _fs2.default.readFileSync("test/certificate/root-ca.crt")
+        ca: cert
     });
     client.on("error", error => {
         _assert.strict.fail(error.message);
@@ -254,16 +254,6 @@ describe("HTTPS setup", () => {
             request.end();
         });
     });
-    describe("Security", () => {
-        it("Certificate required", done => {
-            const unauthorized_client = _http2.default.connect("https://localhost:" + test_port, {});
-            unauthorized_client.on("error", error => {;
-                _assert.strict.equal(error.message, "self signed certificate");
-                _assert.strict.equal(error.code, "DEPTH_ZERO_SELF_SIGNED_CERT");
-                done();
-            });
-        });
-    });
     describe("Compatibility", () => {
         it("HTTP1 supported", done => {
             const options = {
@@ -290,6 +280,16 @@ describe("HTTPS setup", () => {
             });
             request.write("{}");
             request.end();
+        });
+    });
+    describe("Security", () => {
+        it("Certificate required", done => {
+            const unauthorized_client = _http2.default.connect("https://localhost:" + test_port, {});
+            unauthorized_client.on("error", error => {
+                _assert.strict.equal(error.message, "self signed certificate");
+                _assert.strict.equal(error.code, "DEPTH_ZERO_SELF_SIGNED_CERT");
+                done();
+            });
         });
     });
     after(() => {
