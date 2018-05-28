@@ -4,7 +4,7 @@
             "scripts": {
                 "src": "src/**/*.js",
                 "dest": "build",
-                "chain": ["gulp-babel"],
+                "chain": ["gulp-babel", "gulp-uglify-es"],
                 "watch": false
             }
         },
@@ -28,6 +28,7 @@
             ]
         },
         "babel-preset-env": {},
-        "gulp-beautify-code": {}
+        "gulp-beautify-code": {},
+        "gulp-uglify-es": {}
     }
 }

@@ -51,12 +51,14 @@ const options = {
 const test_port = 9600;
 describe("Server setup", () => {
     const service_provider = new _ServiceProvider2.default(service_manifest);
-    console.log("start server");
+    // console.log("start server");
     const server = service_provider.startServer(test_port, options);
     const client = _http2.default.connect("https://localhost:" + test_port, {
         ca: _fs2.default.readFileSync("test/certificate/root-ca.crt")
     });
-    client.on("error", error => console.error(error));
+    client.on("error", error => {
+        console.error(error);
+    });
     describe("METHOD handling", () => {
         it("OPTIONS handling", done => {
             const request = client.request({
@@ -105,7 +107,6 @@ describe("Server setup", () => {
                 ":method": "POST"
             });
             request.setEncoding("utf8");
-            let status_200;
             request.on("response", headers => {
                 // console.log("server response headers", headers);
                 _assert.strict.equal(headers[":status"], 200, "Status not OK");
@@ -116,6 +117,7 @@ describe("Server setup", () => {
                 });
                 request.on("end", () => {
                     // console.log("request end", data);
+                    _assert.strict.doesNotThrow(JSON.parse.bind(JSON, data));
                     const {
                         test_function
                     } = JSON.parse(data);
@@ -128,6 +130,16 @@ describe("Server setup", () => {
                 test_function: [3, 39]
             }));
             request.end();
+        });
+    });
+    describe("Security", () => {
+        it("Certificate required", done => {
+            const unauthorized_client = _http2.default.connect("https://localhost:" + test_port, {});
+            unauthorized_client.on("error", error => {;
+                _assert.strict.equal(error.message, "self signed certificate");
+                _assert.strict.equal(error.code, "DEPTH_ZERO_SELF_SIGNED_CERT");
+                done();
+            });
         });
     });
     after(() => {

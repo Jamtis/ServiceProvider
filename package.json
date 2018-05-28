@@ -9,6 +9,7 @@
         "gulp": "^4.0.0",
         "gulp-babel": "^7.0.1",
         "gulp-beautify-code": "^2.0.3",
+        "gulp-uglify-es": "^1.0.4",
         "gulp-watch": "^5.0.0",
         "mocha": "^5.2.0",
         "stackup": "^1.0.2"
