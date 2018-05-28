@@ -22,6 +22,10 @@ var _https = require("https");
 
 var _https2 = _interopRequireDefault(_https);
 
+var _http3 = require("http");
+
+var _http4 = _interopRequireDefault(_http3);
+
 function _interopRequireWildcard(obj) {
     if (obj && obj.__esModule) {
         return obj;
@@ -43,17 +47,129 @@ function _interopRequireDefault(obj) {
     };
 }
 
-// process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-const options = {
-    key: _fs2.default.readFileSync("test/certificate/root-ca.key"),
-    passphrase: "password",
-    cert: _fs2.default.readFileSync("test/certificate/root-ca.crt"),
-    // ca: fs.readFileSync("test/certificate/root-ca.crt"),
-    allowHTTP1: true,
-    enablePush: true
-};
-const test_port = 9600;
-describe("Server setup", () => {
+describe("HTTP setup", () => {
+    const options = {
+        allowHTTP1: true,
+        enablePush: true
+    };
+    const test_port = 9601;
+    const service_provider = new _ServiceProvider2.default(service_manifest, {
+        logging: false
+    });
+    // console.log("start server");
+    const server = service_provider.startServer(test_port, options);
+    server.on("error", error => {
+        _assert.strict.fail(error.message);
+    });
+    const client = _http2.default.connect("http://localhost:" + test_port, {});
+    client.on("error", error => {
+        _assert.strict.fail(error.message);
+    });
+    describe("METHOD handling", () => {
+        it("OPTIONS handling", done => {
+            const request = client.request({
+                ":method": "OPTIONS"
+            });
+            request.setEncoding("utf8");
+            request.on("response", headers => {
+                // console.log("server response headers", headers);
+                _assert.strict.equal(headers[":status"], 200);
+                _assert.strict.equal(headers["access-control-allow-methods"], "POST,OPTIONS");
+                // done();
+            });
+            let data = "";
+            request.on("data", chunk => {
+                data += chunk;
+            });
+            request.on("end", () => {
+                // console.log("request end", data);
+                done();
+            });
+            request.end();
+        });
+        it("POST handling", done => {
+            const request = client.request({
+                ":method": "POST"
+            });
+            request.setEncoding("utf8");
+            request.on("response", headers => {
+                // console.log("server response headers", headers);
+                _assert.strict.equal(headers[":status"], 200);
+            }); {
+                let data = "";
+                request.on("data", chunk => {
+                    data += chunk;
+                });
+                request.on("end", () => {
+                    // console.log("request end", data);
+                    _assert.strict.equal(data, "{}");
+                    done();
+                });
+            }
+            request.end();
+        });
+        it("POST test function", done => {
+            const request = client.request({
+                ":method": "POST"
+            });
+            request.setEncoding("utf8");
+            request.on("response", headers => {
+                // console.log("server response headers", headers);
+                _assert.strict.equal(headers[":status"], 200);
+            }); {
+                let data = "";
+                request.on("data", chunk => {
+                    data += chunk;
+                });
+                request.on("end", () => {
+                    // console.log("request end", data);
+                    _assert.strict.doesNotThrow(JSON.parse.bind(JSON, data));
+                    const {
+                        test_function
+                    } = JSON.parse(data);
+                    _assert.strict.equal(test_function.status, 200);
+                    _assert.strict.equal(test_function.value, 42);
+                    done();
+                });
+            }
+            request.write(JSON.stringify({
+                test_function: [3, 39]
+            }));
+            request.end();
+        });
+    });
+    describe("Compatibility", () => {
+        it("HTTP1 supported", done => {
+            const options = {
+                hostname: "localhost",
+                port: test_port,
+                path: "/",
+                method: "POST"
+            };
+            const request = _http4.default.get(options, response => {
+                _assert.strict.equal(response.statusCode, 200);
+                done();
+            });
+            request.on("error", error => {
+                _assert.strict.fail(error.message);
+            });
+        });
+    });
+    after(() => {
+        client.close();
+        server.close();
+    });
+});
+describe("HTTPS setup", () => {
+    const options = {
+        key: _fs2.default.readFileSync("test/certificate/root-ca.key"),
+        passphrase: "password",
+        cert: _fs2.default.readFileSync("test/certificate/root-ca.crt"),
+        // ca: fs.readFileSync("test/certificate/root-ca.crt"),
+        allowHTTP1: true,
+        enablePush: true
+    };
+    const test_port = 9600;
     const service_provider = new _ServiceProvider2.default(service_manifest, {
         logging: false
     });
@@ -157,10 +273,23 @@ describe("Server setup", () => {
                 method: "POST",
                 ca: _fs2.default.readFileSync("test/certificate/root-ca.crt")
             };
-            _https2.default.get(options, response => {
+            const request = _https2.default.request(options, response => {
                 _assert.strict.equal(response.statusCode, 200);
-                done();
+                let data = "";
+                response.on("data", chunk => {
+                    data += chunk;
+                });
+                response.on("end", () => {
+                    // console.log("request end", data);
+                    _assert.strict.equal(data, "{}");
+                    done();
+                });
             });
+            request.on("error", error => {
+                _assert.strict.fail(error.message);
+            });
+            request.write("{}");
+            request.end();
         });
     });
     after(() => {

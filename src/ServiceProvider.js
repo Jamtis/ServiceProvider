@@ -95,6 +95,9 @@ export default class ServiceProvider {
         }
         // console.log("hpusr::all service requests resolved");
         response.writeHead(200, {});
+        if (this.logging) {
+            console.log("respond with", response_data);
+        }
         response.write(JSON.stringify(response_data));
         response.end();
     }
