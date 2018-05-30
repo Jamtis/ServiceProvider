@@ -24,7 +24,11 @@ unauthorized_client.on("error", error => {
 const request = unauthorized_client.request({
     ":method": "POST"
 });
+request.on("end", response => {
+    console.timeEnd("ping");
+});
 request.write(JSON.stringify({
     test_function: [3, 39]
 }));
+console.time("ping");
 request.end();

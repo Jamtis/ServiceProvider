@@ -5,6 +5,7 @@ import fs from "fs";
 import http2 from "http2";
 import https from "https";
 import http from "http";
+console.clear();
 describe("HTTP setup", () => {
     const options = {
         allowHTTP1: true,
@@ -183,7 +184,7 @@ describe("HTTPS setup", () => {
                 port: test_port,
                 path: "/",
                 method: "POST",
-                ca: fs.readFileSync("test/certificate/root-ca.crt")
+                ca: cert
             };
             const request = https.request(options, response => {
                 assert.equal(response.statusCode, 200);

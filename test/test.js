@@ -47,6 +47,7 @@ function _interopRequireDefault(obj) {
     };
 }
 
+console.clear();
 describe("HTTP setup", () => {
     const options = {
         allowHTTP1: true,
@@ -228,7 +229,7 @@ describe("HTTPS setup", () => {
                 port: test_port,
                 path: "/",
                 method: "POST",
-                ca: _fs2.default.readFileSync("test/certificate/root-ca.crt")
+                ca: cert
             };
             const request = _https2.default.request(options, response => {
                 _assert.strict.equal(response.statusCode, 200);

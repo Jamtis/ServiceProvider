@@ -158,7 +158,7 @@ export default class ServiceProvider {
     startServer(port, options) {
         const http2 = require("http2");
         if (!options.pfx && (!options.cert || !options.key)) {
-            console.warn("insufficient security provided; not using https", options);
+            console.warn("insufficient security provided; not using https");
             const server = http2.createServer(options, this.handleRequest.bind(this));
             server.listen(port || 9600);
             return server;

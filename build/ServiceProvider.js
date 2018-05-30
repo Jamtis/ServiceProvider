@@ -127,7 +127,7 @@ class ServiceProvider {
     startServer(e, t) {
         const r = require("http2");
         if (!(t.pfx || t.cert && t.key)) {
-            console.warn("insufficient security provided; not using https", t);
+            console.warn("insufficient security provided; not using https");
             const i = r.createServer(t, this.handleRequest.bind(this));
             return i.listen(e || 9600), i
         }

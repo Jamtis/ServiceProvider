@@ -10,7 +10,7 @@
         },
         "testing": {
             "mocha": {
-                "src": "test_src/*.js",
+                "src": "src/test/*.js",
                 "dest": "test",
                 "chain": ["gulp-babel", "gulp-beautify-code"],
                 "watch": false
