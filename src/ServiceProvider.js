@@ -10,6 +10,9 @@ export default class ServiceProvider {
             }
         });
         this.logging = options.logging;
+        if (typeof options.isAuthorized == "function") {
+            this.isAuthorized = options.isAuthorized;
+        }
     }
     async handleRequest(request, response) {
         try {
@@ -20,12 +23,10 @@ export default class ServiceProvider {
             }
             // check validity
             if (this.checkRequest(request_data, response)) {
-                // console.log("going to invoke sf");
                 // call service functions
                 await this.invokeServiceFunctions(request_data, response);
             } else {
-                // console.log("not going to invoke sf");
-                // return HTTP status
+                // checkRequest already assigned the HTTP status
             }
         } catch (error) {
             console.error(error);
@@ -51,19 +52,28 @@ export default class ServiceProvider {
                 console.error(error);
             }
             if (typeof service_function === "function") {
-                // console.log("\x1b[34m", "call", property, "with", parameters[property], "\x1b[0m");
-                try {
-                    requests.set(property, service_function.call(this.service_manifest, parameters[property]));
-                } catch (error) {
-                    console.error(error);
-                    if (error instanceof Error) {
-                        response_data[property] = {
-                            status: 500,
-                            reason: "Service function encountered an error"
-                        };
-                    } else {
-                        response_data[property] = error;
+                // check authorization
+                if (this.isAuthorized(property, request_data.authorization)) {
+                    // console.log("\x1b[34m", "call", property, "with", parameters[property], "\x1b[0m");
+                    try {
+                        requests.set(property, service_function.call(this.service_manifest, parameters[property]));
+                    } catch (error) {
+                        console.error(error);
+                        if (error instanceof Error) {
+                            response_data[property] = {
+                                status: 500,
+                                reason: "Service function encountered an error"
+                            };
+                        } else {
+                            response_data[property] = error;
+                        }
                     }
+                } else {
+                    // send HTTP status 401
+                    response_data[property] = {
+                        status: 401,
+                        reason: "Unauthorized"
+                    };
                 }
             } else {
                 response_data[property] = {
@@ -133,6 +143,12 @@ export default class ServiceProvider {
             }
         }
         const accepted = !request.headers.accept || /(application\/(json|\*)|\*\/\*)/g.test(request.headers.accept);
+        const {authorization} = request.headers;
+        let user, password;
+        if (authorization) {
+            const decoded_authorization = Buffer.from(authorization.match(/Basic\ (.+)/)[1], "base64").toString();
+            [, user, password] = decoded_authorization.match(/^([^:]+?):(.*)$/);
+        }
         return {
             method: request.method,
             headers: request.headers,
@@ -140,7 +156,11 @@ export default class ServiceProvider {
             data,
             query_parameters,
             body_parameters,
-            accepted
+            accepted,
+            authorization: {
+                user,
+                password
+            }
         }
     }
     checkRequest(request_data, response) {
@@ -172,6 +192,10 @@ export default class ServiceProvider {
                     Allow: "OPTIONS,POST"
                 });
         }
+    }
+    isAuthorized(service_function_name, {user, password} = {}) {
+        // no authorization required by default
+        return true;
     }
     startServer(port, options) {
         const http2 = require("http2");
