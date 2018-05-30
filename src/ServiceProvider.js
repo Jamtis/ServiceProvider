@@ -21,26 +21,28 @@ export default class ServiceProvider {
             if (this.logging) {
                 console.log("request analyzed", request_data);
             }
-            // check validity
+            // check if request is accepted
             if (this.checkRequest(request_data, response)) {
-                let service_function;
-                try {
-                    service_function = this.service_manifest[request_data.service_function_name];
-                } catch (error) {
-                    console.error(error);
-                }
-                if (typeof service_function === "function") {
+                // check if requested service function is present
+                if (this.hasServiceFunction(request_data)) {
+                    // check if request is authorized
                     if (this.isAuthorized(request_data.service_function_name, request_data.authorization)) {
                         // call service functions
                         await this.invokeServiceFunction(request_data, response);
                     } else {
-                        response.writeHead(401);
+                        if (request_data.authorization.user) {
+                            // invalid authorization provided
+                            response.writeHead(403);
+                        } else {
+                            // no authorization provided but required
+                            response.writeHead(401, {
+                                "WWW-Authenticate": "Basic " + request_data.service_function_name
+                            });
+                        }
                     }
                 } else {
                     response.writeHead(501);
                 }
-            } else {
-                // checkRequest already assigned the HTTP status
             }
         } catch (error) {
             console.error(error);
@@ -59,12 +61,15 @@ export default class ServiceProvider {
         try {
             const response_value = await service_function.call(this.service_manifest, request_data.service_function_arguments);
             response_string = JSON.stringify(response_value);
+            response.writeHead(200);
+            response.write(response_string);
         } catch (error) {
-            console.error(error);
-            response.writeHead(500);
+            try {
+                response.writeHead(500);
+            } catch (error) {
+                console.error(error);
+            }
         }
-        response.writeHead(200);
-        response.write(response_string);
     }
     async analyzeRequest(request) {
         const url_object = url.parse(request.url);
@@ -91,14 +96,7 @@ export default class ServiceProvider {
             const body = JSON.parse(data);
             service_function_name = body.service_function;
             service_function_arguments = body.arguments;
-            // console.log("analyzeRequest::parse", body_parameters);
-        } catch (error) {
-            if (data != "") {
-                console.error(error);
-            } else {
-                // console.log("ar:: empty request body");
-            }
-        }
+        } catch (error) {}
         const accepted = !request.headers.accept || /(application\/(json|\*)|\*\/\*)/g.test(request.headers.accept);
         const {authorization} = request.headers;
         let user, password;
@@ -127,13 +125,19 @@ export default class ServiceProvider {
                 if (this.logging) {
                     console.log("\x1b[32m", "Check", request_data.method, "request", request_data.pathname, "\x1b[0m");
                 }
+                if (request_data.service_function_name === undefined) {
+                    console.log("problem");
+                    response.writeHead(400);
+                    break;
+                }
                 // console.log("request headers", request.headers);
                 if (request_data.accepted) {
                     return true;
+                } else {
+                    response.writeHead(406, {
+                        Accept: ["application/json"]
+                    });
                 }
-                response.writeHead(406, {
-                    Accept: ["application/json"]
-                });
                 break;
             case "OPTIONS":
                 if (this.logging) {
@@ -142,7 +146,7 @@ export default class ServiceProvider {
                 response.writeHead(200, {
                     "Access-Control-Request-Methods": "OPTIONS",
                     "Access-Control-Allow-Methods": "POST,OPTIONS",
-                    "Access-Control-Allow-Headers": "Content-Type, Authorization"
+                    "Access-Control-Allow-Headers": "Authorization"
                 });
                 break;
             default:
@@ -150,10 +154,20 @@ export default class ServiceProvider {
                     Allow: "OPTIONS,POST"
                 });
         }
+        return false;
     }
     isAuthorized(service_function_name, {user, password} = {}) {
         // no authorization required by default
         return true;
+    }
+    hasServiceFunction(request_data) {
+        let service_function;
+        try {
+            service_function = this.service_manifest[request_data.service_function_name];
+        } catch (error) {
+            console.error(error);
+        }
+        return typeof service_function == "function";
     }
     startServer(port, options) {
         const http2 = require("http2");

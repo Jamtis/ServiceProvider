@@ -24,15 +24,9 @@ class ServiceProvider {
     async handleRequest(e, t) {
         try {
             const r = await this.analyzeRequest(e);
-            if (this.logging && console.log("request analyzed", r), this.checkRequest(r, t)) {
-                let e;
-                try {
-                    e = this.service_manifest[r.service_function_name]
-                } catch (e) {
-                    console.error(e)
-                }
-                "function" == typeof e ? this.isAuthorized(r.service_function_name, r.authorization) ? await this.invokeServiceFunction(r, t) : t.writeHead(401) : t.writeHead(501)
-            }
+            this.logging && console.log("request analyzed", r), this.checkRequest(r, t) && (this.hasServiceFunction(r) ? this.isAuthorized(r.service_function_name, r.authorization) ? await this.invokeServiceFunction(r, t) : r.authorization.user ? t.writeHead(403) : t.writeHead(401, {
+                "WWW-Authenticate": "Basic " + r.service_function_name
+            }) : t.writeHead(501))
         } catch (e) {
             console.error(e)
         } finally {
@@ -47,12 +41,15 @@ class ServiceProvider {
         const r = this.service_manifest[e.service_function_name];
         let i = "{}";
         try {
-            const s = await r.call(this.service_manifest, e.service_function_arguments);
-            i = JSON.stringify(s)
+            const n = await r.call(this.service_manifest, e.service_function_arguments);
+            i = JSON.stringify(n), t.writeHead(200), t.write(i)
         } catch (e) {
-            console.error(e), t.writeHead(500)
+            try {
+                t.writeHead(500)
+            } catch (e) {
+                console.error(e)
+            }
         }
-        t.writeHead(200), t.write(i)
     }
     async analyzeRequest(e) {
         const t = _url2.default.parse(e.url);
@@ -66,13 +63,11 @@ class ServiceProvider {
         });
         const i = _querystring2.default.parse(t.query);
         for (const e in i) i[e] = decodeURIComponent(i[e]);
-        let s, n;
+        let n, s;
         try {
             const e = JSON.parse(r);
-            s = e.service_function, n = e.arguments
-        } catch (e) {
-            "" != r && console.error(e)
-        }
+            n = e.service_function, s = e.arguments
+        } catch (e) {}
         const o = !e.headers.accept || /(application\/(json|\*)|\*\/\*)/g.test(e.headers.accept),
             {
                 authorization: a
@@ -88,8 +83,8 @@ class ServiceProvider {
             pathname: t.pathname,
             data: r,
             query_parameters: i,
-            service_function_name: s,
-            service_function_arguments: n,
+            service_function_name: n,
+            service_function_arguments: s,
             accepted: o,
             authorization: {
                 user: c,
@@ -100,7 +95,11 @@ class ServiceProvider {
     checkRequest(e, t) {
         switch (e.method) {
             case "POST":
-                if (this.logging && console.log("[32m", "Check", e.method, "request", e.pathname, "[0m"), e.accepted) return !0;
+                if (this.logging && console.log("[32m", "Check", e.method, "request", e.pathname, "[0m"), void 0 === e.service_function_name) {
+                    console.log("problem"), t.writeHead(400);
+                    break
+                }
+                if (e.accepted) return !0;
                 t.writeHead(406, {
                     Accept: ["application/json"]
                 });
@@ -109,7 +108,7 @@ class ServiceProvider {
                 this.logging && console.log("[35m", "Detected", e.method, "request", "[0m"), t.writeHead(200, {
                     "Access-Control-Request-Methods": "OPTIONS",
                     "Access-Control-Allow-Methods": "POST,OPTIONS",
-                    "Access-Control-Allow-Headers": "Content-Type, Authorization"
+                    "Access-Control-Allow-Headers": "Authorization"
                 });
                 break;
             default:
@@ -117,12 +116,22 @@ class ServiceProvider {
                     Allow: "OPTIONS,POST"
                 })
         }
+        return !1
     }
     isAuthorized(e, {
         user: t,
         password: r
     } = {}) {
         return !0
+    }
+    hasServiceFunction(e) {
+        let t;
+        try {
+            t = this.service_manifest[e.service_function_name]
+        } catch (e) {
+            console.error(e)
+        }
+        return "function" == typeof t
     }
     startServer(e, t) {
         const r = require("http2");

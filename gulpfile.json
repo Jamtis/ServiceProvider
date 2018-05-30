@@ -2,7 +2,7 @@
     "bundles": {
         "app": {
             "scripts": {
-                "src": "src/**/*.js",
+                "src": ["src/**/*.js", "!src/test/**/*.js"],
                 "dest": "build",
                 "chain": ["gulp-babel", "gulp-uglify-es", "gulp-beautify-code"],
                 "watch": false
