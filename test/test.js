@@ -86,27 +86,6 @@ describe("HTTP setup", () => {
             });
             request.end();
         });
-        it("POST handling", done => {
-            const request = client.request({
-                ":method": "POST"
-            });
-            request.setEncoding("utf8");
-            request.on("response", headers => {
-                // console.log("server response headers", headers);
-                _assert.strict.equal(headers[":status"], 200);
-            }); {
-                let data = "";
-                request.on("data", chunk => {
-                    data += chunk;
-                });
-                request.on("end", () => {
-                    // console.log("request end", data);
-                    _assert.strict.equal(data, "{}");
-                    done();
-                });
-            }
-            request.end();
-        });
         it("POST test function", done => {
             const request = client.request({
                 ":method": "POST"
@@ -123,16 +102,14 @@ describe("HTTP setup", () => {
                 request.on("end", () => {
                     // console.log("request end", data);
                     _assert.strict.doesNotThrow(JSON.parse.bind(JSON, data));
-                    const {
-                        test_function
-                    } = JSON.parse(data);
-                    _assert.strict.equal(test_function.status, 200);
-                    _assert.strict.equal(test_function.value, 42);
+                    const value = JSON.parse(data);
+                    _assert.strict.equal(value, 42);
                     done();
                 });
             }
             request.write(JSON.stringify({
-                test_function: [3, 39]
+                service_function: "test_function",
+                arguments: [3, 39]
             }));
             request.end();
         });
@@ -216,27 +193,6 @@ describe("HTTPS setup", () => {
             });
             request.end();
         });
-        it("POST handling", done => {
-            const request = client.request({
-                ":method": "POST"
-            });
-            request.setEncoding("utf8");
-            request.on("response", headers => {
-                // console.log("server response headers", headers);
-                _assert.strict.equal(headers[":status"], 200);
-            }); {
-                let data = "";
-                request.on("data", chunk => {
-                    data += chunk;
-                });
-                request.on("end", () => {
-                    // console.log("request end", data);
-                    _assert.strict.equal(data, "{}");
-                    done();
-                });
-            }
-            request.end();
-        });
         it("POST test function", done => {
             const request = client.request({
                 ":method": "POST"
@@ -253,16 +209,14 @@ describe("HTTPS setup", () => {
                 request.on("end", () => {
                     // console.log("request end", data);
                     _assert.strict.doesNotThrow(JSON.parse.bind(JSON, data));
-                    const {
-                        test_function
-                    } = JSON.parse(data);
-                    _assert.strict.equal(test_function.status, 200);
-                    _assert.strict.equal(test_function.value, 42);
+                    const value = JSON.parse(data);
+                    _assert.strict.equal(value, 42);
                     done();
                 });
             }
             request.write(JSON.stringify({
-                test_function: [3, 39]
+                service_function: "test_function",
+                arguments: [3, 39]
             }));
             request.end();
         });
@@ -284,14 +238,19 @@ describe("HTTPS setup", () => {
                 });
                 response.on("end", () => {
                     // console.log("request end", data);
-                    _assert.strict.equal(data, "{}");
+                    _assert.strict.doesNotThrow(JSON.parse.bind(JSON, data));
+                    const value = JSON.parse(data);
+                    _assert.strict.equal(value, 42);
                     done();
                 });
             });
             request.on("error", error => {
                 _assert.strict.fail(error.message);
             });
-            request.write("{}");
+            request.write(JSON.stringify({
+                service_function: "test_function",
+                arguments: [3, 39]
+            }));
             request.end();
         });
     });
@@ -321,16 +280,14 @@ describe("HTTPS setup", () => {
                 request.on("end", () => {
                     // console.log("request end", data);
                     _assert.strict.doesNotThrow(JSON.parse.bind(JSON, data));
-                    const {
-                        test_authorized_function
-                    } = JSON.parse(data);
-                    _assert.strict.equal(test_authorized_function.status, 200);
-                    _assert.strict.equal(test_authorized_function.value, 42);
+                    const value = JSON.parse(data);
+                    _assert.strict.equal(value, 42);
                     done();
                 });
             }
             request.write(JSON.stringify({
-                test_authorized_function: [3, 39]
+                service_function: "test_authorized_function",
+                arguments: [3, 39]
             }));
             request.end();
         });
@@ -341,25 +298,12 @@ describe("HTTPS setup", () => {
             request.setEncoding("utf8");
             request.on("response", headers => {
                 // console.log("server response headers", headers);
-                _assert.strict.equal(headers[":status"], 200);
-            }); {
-                let data = "";
-                request.on("data", chunk => {
-                    data += chunk;
-                });
-                request.on("end", () => {
-                    // console.log("request end", data);
-                    _assert.strict.doesNotThrow(JSON.parse.bind(JSON, data));
-                    const {
-                        test_authorized_function
-                    } = JSON.parse(data);
-                    _assert.strict.equal(test_authorized_function.status, 401);
-                    _assert.strict.equal(test_authorized_function.value, undefined);
-                    done();
-                });
-            }
+                _assert.strict.equal(headers[":status"], 401);
+                done();
+            });
             request.write(JSON.stringify({
-                test_authorized_function: [3, 39]
+                service_function: "test_authorized_function",
+                arguments: [3, 39]
             }));
             request.end();
         });

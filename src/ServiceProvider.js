@@ -23,8 +23,22 @@ export default class ServiceProvider {
             }
             // check validity
             if (this.checkRequest(request_data, response)) {
-                // call service functions
-                await this.invokeServiceFunctions(request_data, response);
+                let service_function;
+                try {
+                    service_function = this.service_manifest[request_data.service_function_name];
+                } catch (error) {
+                    console.error(error);
+                }
+                if (typeof service_function === "function") {
+                    if (this.isAuthorized(request_data.service_function_name, request_data.authorization)) {
+                        // call service functions
+                        await this.invokeServiceFunction(request_data, response);
+                    } else {
+                        response.writeHead(401);
+                    }
+                } else {
+                    response.writeHead(501);
+                }
             } else {
                 // checkRequest already assigned the HTTP status
             }
@@ -38,78 +52,19 @@ export default class ServiceProvider {
             }
         }
     }
-    async invokeServiceFunctions(request_data, response) {
-        const requests = new Map;
-        const response_data = {};
-        const parameters = request_data.body_parameters;
-        // check if service functions exists and execute
-        for (const property in parameters) {
-            // console.log("service_function", property);
-            let service_function;
-            try {
-                service_function = this.service_manifest[property];
-            } catch (error) {
-                console.error(error);
-            }
-            if (typeof service_function === "function") {
-                // check authorization
-                if (this.isAuthorized(property, request_data.authorization)) {
-                    // console.log("\x1b[34m", "call", property, "with", parameters[property], "\x1b[0m");
-                    try {
-                        requests.set(property, service_function.call(this.service_manifest, parameters[property]));
-                    } catch (error) {
-                        console.error(error);
-                        if (error instanceof Error) {
-                            response_data[property] = {
-                                status: 500,
-                                reason: "Service function encountered an error"
-                            };
-                        } else {
-                            response_data[property] = error;
-                        }
-                    }
-                } else {
-                    // send HTTP status 401
-                    response_data[property] = {
-                        status: 401,
-                        reason: "Unauthorized"
-                    };
-                }
-            } else {
-                response_data[property] = {
-                    status: 501,
-                    reason: "Service not implemented"
-                }
-            }
+    async invokeServiceFunction(request_data, response) {
+        const service_function = this.service_manifest[request_data.service_function_name];
+        // console.log("\x1b[34m", "call", property, "with", parameters[property], "\x1b[0m");
+        let response_string = "{}";
+        try {
+            const response_value = await service_function.call(this.service_manifest, request_data.service_function_arguments);
+            response_string = JSON.stringify(response_value);
+        } catch (error) {
+            console.error(error);
+            response.writeHead(500);
         }
-        // console.log("isf", "all service requests fired");
-        // await results parallely
-        for (const [property, request] of requests) {
-            // console.log("isf::property", property);
-            try {
-                response_data[property] = {
-                    status: 200,
-                    value: await request
-                };
-            } catch (error) {
-                console.error(error);
-                if (error instanceof Error) {
-                    response_data[property] = {
-                        status: 500,
-                        reason: "unknown"
-                    };
-                } else {
-                    response_data[property] = error;
-                }
-            }
-        }
-        // console.log("hpusr::all service requests resolved");
-        response.writeHead(200, {});
-        if (this.logging) {
-            console.log("respond with", response_data);
-        }
-        response.write(JSON.stringify(response_data));
-        response.end();
+        response.writeHead(200);
+        response.write(response_string);
     }
     async analyzeRequest(request) {
         const url_object = url.parse(request.url);
@@ -130,10 +85,12 @@ export default class ServiceProvider {
         for (const parameter in query_parameters) {
             query_parameters[parameter] = decodeURIComponent(query_parameters[parameter]);
         }
-        let body_parameters = {};
+        let service_function_name, service_function_arguments;
         // console.log("analyzeRequest::parse", data);
         try {
-            body_parameters = JSON.parse(data);
+            const body = JSON.parse(data);
+            service_function_name = body.service_function;
+            service_function_arguments = body.arguments;
             // console.log("analyzeRequest::parse", body_parameters);
         } catch (error) {
             if (data != "") {
@@ -155,7 +112,8 @@ export default class ServiceProvider {
             pathname: url_object.pathname,
             data,
             query_parameters,
-            body_parameters,
+            service_function_name,
+            service_function_arguments,
             accepted,
             authorization: {
                 user,
