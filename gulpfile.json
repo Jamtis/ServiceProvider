@@ -6,6 +6,11 @@
                 "dest": "build",
                 "chain": ["gulp-babel", "gulp-uglify-es", "gulp-beautify-code"],
                 "watch": false
+            },
+            "documentation": {
+                "src": ["src", "!src/test"],
+                "chain": ["gulp-esdoc"],
+                "watch": false
             }
         },
         "testing": {
@@ -29,6 +34,10 @@
         },
         "babel-preset-env": {},
         "gulp-beautify-code": {},
-        "gulp-uglify-es": {}
+        "gulp-uglify-es": {},
+        "gulp-esdoc": {
+            "destination": "./docs",
+            "excludes": ["(example|test)\\/.+\\.js$"]
+        }
     }
 }

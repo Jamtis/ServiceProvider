@@ -1,12 +1,52 @@
-import url from "url";
-import querystring from "querystring";
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl" href="../../">
+  <title data-ice="title">src/ServiceProvider.js | API Document</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  
+  
+  <script src="script/manual.js"></script>
+</head>
+<body class="layout-container" data-ice="rootContainer">
+
+<header>
+  <a href="./">Home</a>
+  
+  <a href="identifiers.html">Reference</a>
+  <a href="source.html">Source</a>
+  
+  <a data-ice="repoURL" href="https://github.com/jamtis/ServiceProvider" class="repo-url-github">Repository</a>
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+</header>
+
+<nav class="navigation" data-ice="nav"><div>
+  <ul>
+    
+  <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/ServiceProvider.js~ServiceProvider.html">ServiceProvider</a></span></span></li>
+</ul>
+</div>
+</nav>
+
+<div class="content" data-ice="content"><h1 data-ice="title">src/ServiceProvider.js</h1>
+<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">import url from &quot;url&quot;;
+import querystring from &quot;querystring&quot;;
 
 /**
  * @name ServiceProvider
  * @example
  * const manifest = {
  *     test_function(a,b) {
- *         return a + b;
+ *         return a+b;
  *     }
  * };
  * const options = {
@@ -38,16 +78,16 @@ export default class ServiceProvider {
          * @access public
          * */
         this.logging = options.logging;
-        if (typeof options.isAuthorized == "function") {
+        if (typeof options.isAuthorized == &quot;function&quot;) {
             this.isAuthorized = options.isAuthorized;
         }
     }
     /**
      * This method handles requests made to the server.
      * It analyzes the incoming request and responds with the appropriate HTTP status.
-     * It is meant to be the direct callback of 'createServer'.
-     * @param {http.IncomingMessage} request - given by the 'request'-event of the server
-     * @param {http.ServerResponse} response - given by the 'request'-event of the server
+     * It is meant to be the direct callback of &apos;createServer&apos;.
+     * @param {http.IncomingMessage} request - given by the &apos;request&apos;-event of the server
+     * @param {http.ServerResponse} response - given by the &apos;request&apos;-event of the server
      * @access public
      * */
     async handleRequest(request, response) {
@@ -55,7 +95,7 @@ export default class ServiceProvider {
             // analyze request
             const request_data = await this.analyzeRequest(request);
             if (this.logging) {
-                console.log("request analyzed", request_data);
+                console.log(&quot;request analyzed&quot;, request_data);
             }
             // check if request is accepted
             if (this.checkRequest(request_data, response)) {
@@ -72,7 +112,7 @@ export default class ServiceProvider {
                         } else {
                             // no authorization provided but required
                             response.writeHead(401, {
-                                "WWW-Authenticate": "Basic " + request_data.service_function_name
+                                &quot;WWW-Authenticate&quot;: &quot;Basic &quot; + request_data.service_function_name
                             });
                         }
                     }
@@ -94,15 +134,15 @@ export default class ServiceProvider {
      * This method is called when a request is valid and authorized and the requested service function exists.
      * It invokes the requested service function and writes the result to the response body.
      * @param {Object} request_data - analyzed representation of the request
-     * @param {http.ServerResponse} response - given by the 'request'-event of the server
+     * @param {http.ServerResponse} response - given by the &apos;request&apos;-event of the server
      * @access protected
      * */
     async invokeServiceFunction(request_data, response) {
         const service_function = this.service_manifest[request_data.service_function_name];
         if (this.logging) {
-            console.log("\x1b[34m", "call", request_data.service_function_name, "with", ...request_data.service_function_arguments, "\x1b[0m");
+            console.log(&quot;\x1b[34m&quot;, &quot;call&quot;, request_data.service_function_name, &quot;with&quot;, ...request_data.service_function_arguments, &quot;\x1b[0m&quot;);
         }
-        let response_string = "{}";
+        let response_string = &quot;{}&quot;;
         try {
             const response_value = await service_function.call(this.service_manifest, request_data.service_function_arguments);
             response_string = JSON.stringify(response_value);
@@ -119,18 +159,18 @@ export default class ServiceProvider {
     /**
      * This method analyzes requests made to the server.
      * It preprocesses the request to extract essential information.
-     * @param {http.IncomingMessage} request - given by the 'request'-event of the server
+     * @param {http.IncomingMessage} request - given by the &apos;request&apos;-event of the server
      * @access protected
      * @return {Object} - a representation of the  essential request properties
      * */
     async analyzeRequest(request) {
         const url_object = url.parse(request.url);
-        let data = "";
-        request.on("data", chunk => {
+        let data = &quot;&quot;;
+        request.on(&quot;data&quot;, chunk =&gt; {
             data += chunk.toString();
         });
-        await new Promise((resolve, reject) => {
-            request.on("end", error => {
+        await new Promise((resolve, reject) =&gt; {
+            request.on(&quot;end&quot;, error =&gt; {
                 if (error) {
                     reject(error);
                 } else {
@@ -143,7 +183,7 @@ export default class ServiceProvider {
             query_parameters[parameter] = decodeURIComponent(query_parameters[parameter]);
         }
         let service_function_name, service_function_arguments;
-        // console.log("analyzeRequest::parse", data);
+        // console.log(&quot;analyzeRequest::parse&quot;, data);
         try {
             const body = JSON.parse(data);
             service_function_name = body.service_function;
@@ -153,7 +193,7 @@ export default class ServiceProvider {
         const {authorization} = request.headers;
         let user, password;
         if (authorization) {
-            const decoded_authorization = Buffer.from(authorization.match(/Basic\ (.+)/)[1], "base64").toString();
+            const decoded_authorization = Buffer.from(authorization.match(/Basic\ (.+)/)[1], &quot;base64&quot;).toString();
             [, user, password] = decoded_authorization.match(/^([^:]+?):(.*)$/);
         }
         return {
@@ -175,43 +215,43 @@ export default class ServiceProvider {
      * This method is called when a request is analyzed.
      * It handles the HTTP negotiations.
      * @param {Object} request_data - analyzed representation of the request
-     * @param {http.ServerResponse} response - given by the 'request'-event of the server
+     * @param {http.ServerResponse} response - given by the &apos;request&apos;-event of the server
      * @access protected
      * @return {boolean} true - if and only if a POST request is accepted and well-formed
      * */
     checkRequest(request_data, response) {
         switch (request_data.method) {
-            case "POST":
+            case &quot;POST&quot;:
                 if (this.logging) {
-                    console.log("\x1b[32m", "Check", request_data.method, "request", request_data.pathname, "\x1b[0m");
+                    console.log(&quot;\x1b[32m&quot;, &quot;Check&quot;, request_data.method, &quot;request&quot;, request_data.pathname, &quot;\x1b[0m&quot;);
                 }
                 if (request_data.service_function_name === undefined) {
-                    console.log("problem");
+                    console.log(&quot;problem&quot;);
                     response.writeHead(400);
                     break;
                 }
-                // console.log("request headers", request.headers);
+                // console.log(&quot;request headers&quot;, request.headers);
                 if (request_data.accepted) {
                     return true;
                 } else {
                     response.writeHead(406, {
-                        Accept: ["application/json"]
+                        Accept: [&quot;application/json&quot;]
                     });
                 }
                 break;
-            case "OPTIONS":
+            case &quot;OPTIONS&quot;:
                 if (this.logging) {
-                    console.log("\x1b[35m", "Detected", request_data.method, "request", "\x1b[0m");
+                    console.log(&quot;\x1b[35m&quot;, &quot;Detected&quot;, request_data.method, &quot;request&quot;, &quot;\x1b[0m&quot;);
                 }
                 response.writeHead(200, {
-                    "Access-Control-Request-Methods": "OPTIONS",
-                    "Access-Control-Allow-Methods": "POST,OPTIONS",
-                    "Access-Control-Allow-Headers": "Authorization"
+                    &quot;Access-Control-Request-Methods&quot;: &quot;OPTIONS&quot;,
+                    &quot;Access-Control-Allow-Methods&quot;: &quot;POST,OPTIONS&quot;,
+                    &quot;Access-Control-Allow-Headers&quot;: &quot;Authorization&quot;
                 });
                 break;
             default:
                 response.writeHead(405, {
-                    Allow: "OPTIONS,POST"
+                    Allow: &quot;OPTIONS,POST&quot;
                 });
         }
         return false;
@@ -219,7 +259,7 @@ export default class ServiceProvider {
     /**
      * This method is called to determine whether a request shall be authorized.
      * This is the default setting which authorizes all request.
-     * It is meant o be overwritten when necessary either by class extension or by the constructor 'options'
+     * It is meant o be overwritten when necessary either by class extension or by the constructor &apos;options&apos;
      * @param {string} service_function_name - name or the requested service function
      * @param {{user: string, password: string}} credentials - credentials to authorize request
      * @access protected
@@ -231,7 +271,7 @@ export default class ServiceProvider {
     }
     /**
      * This method is called to determine whether a service function exists.
-     * It checks if the manifest has a property which matches the service function's name and if it's a function.
+     * It checks if the manifest has a property which matches the service function&apos;s name and if it&apos;s a function.
      * @param {Object} request_data - analyzed representation of the request
      * @access protected
      * @return {boolean} true - if and only if the requested service function exists (and is a function)
@@ -243,20 +283,20 @@ export default class ServiceProvider {
         } catch (error) {
             console.error(error);
         }
-        return typeof service_function == "function";
+        return typeof service_function == &quot;function&quot;;
     }
     /**
-     * This method provides a convenient way to start a server which uses this 'ServiceProvider'.
+     * This method provides a convenient way to start a server which uses this &apos;ServiceProvider&apos;.
      * If a certificate is provided then the server uses HTTPS otherwise HTTP.
      * @param {number} port - the servers port
-     * @param {Object} options - passed to the http 'createServer' function
+     * @param {Object} options - passed to the http &apos;createServer&apos; function
      * @access public
      * @return {http.Http2Server|http.Http2SecureServer} server - the started server instance
      * */
     startServer(port, options) {
-        const http2 = require("http2");
-        if (!options.pfx && (!options.cert || !options.key)) {
-            console.warn("insufficient security provided; not using https");
+        const http2 = require(&quot;http2&quot;);
+        if (!options.pfx &amp;&amp; (!options.cert || !options.key)) {
+            console.warn(&quot;insufficient security provided; not using https&quot;);
             const server = http2.createServer(options, this.handleRequest.bind(this));
             server.listen(port);
             return server;
@@ -265,4 +305,20 @@ export default class ServiceProvider {
         server.listen(port);
         return server;
     }
-};
+};</code></pre>
+
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(0.5.2)</span><img src="./image/esdoc-logo-mini-black.png"></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>

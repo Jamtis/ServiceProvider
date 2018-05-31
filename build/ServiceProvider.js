@@ -39,6 +39,7 @@ class ServiceProvider {
     }
     async invokeServiceFunction(e, t) {
         const r = this.service_manifest[e.service_function_name];
+        this.logging && console.log("[34m", "call", e.service_function_name, "with", ...e.service_function_arguments, "[0m");
         let i = "{}";
         try {
             const n = await r.call(this.service_manifest, e.service_function_arguments);
@@ -138,10 +139,10 @@ class ServiceProvider {
         if (!(t.pfx || t.cert && t.key)) {
             console.warn("insufficient security provided; not using https");
             const i = r.createServer(t, this.handleRequest.bind(this));
-            return i.listen(e || 9600), i
+            return i.listen(e), i
         }
         const i = r.createSecureServer(t, this.handleRequest.bind(this));
-        return i.listen(e || 9600), i
+        return i.listen(e), i
     }
 }
 exports.default = ServiceProvider;

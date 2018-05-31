@@ -26,7 +26,9 @@ for (const bundle in bundles) {
                     pipe_part = pipe_part.pipe(pipe_function(settings));
                     pipe_part.on("error", error => console.error(error.toString()));
                 }
-                pipe_part = pipe_part.pipe(gulp.dest(task.dest));
+                if (task.dest !== undefined) {
+                    pipe_part = pipe_part.pipe(gulp.dest(task.dest));
+                }
                 return pipe_part;
             });
         } catch (e) {

@@ -47,7 +47,7 @@ function _interopRequireDefault(obj) {
     };
 }
 
-console.clear();
+// console.clear();
 const test_function_name = "test_function";
 const test_authorized_function_name = "test_authorized_function";
 const test_unimplemented_function_name = "test_unimplemented_function";

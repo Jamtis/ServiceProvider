@@ -1,0 +1,1036 @@
+[
+  {
+    "__docId__": 0,
+    "kind": "file",
+    "name": "src/ServiceProvider.js",
+    "content": "import url from \"url\";\nimport querystring from \"querystring\";\n\n/**\n * @name ServiceProvider\n * @example\n * const manifest = {\n *     test_function(a,b) {\n *         return a+b;\n *     }\n * };\n * const options = {\n *     logging: false,\n *     isAuthorized() {\n *         return true; \n *     }\n * };\n * const service_provider = new ServiceProvider(manifest, options);\n * service_provider.startServer(8000);\n * @access public\n * */\nexport default class ServiceProvider {\n    /**\n     * Constructs the ServiceProvider.\n     * @param {object} service_manifest - provides the service functions available via the server\n     * @param {{logging: boolean, isAuthorized: function}} options - logging to console, authorization check function\n     * */\n    constructor(service_manifest, options = {}) {\n        Object.defineProperties(this, {\n            service_manifest: {\n                value: service_manifest,\n                enumerable: true\n            }\n        });\n        /**\n         * Determines whether the server should log to the console.\n         * @type {boolean}\n         * @access public\n         * */\n        this.logging = options.logging;\n        if (typeof options.isAuthorized == \"function\") {\n            this.isAuthorized = options.isAuthorized;\n        }\n    }\n    /**\n     * This method handles requests made to the server.\n     * It analyzes the incoming request and responds with the appropriate HTTP status.\n     * It is meant to be the direct callback of 'createServer'.\n     * @param {http.IncomingMessage} request - given by the 'request'-event of the server\n     * @param {http.ServerResponse} response - given by the 'request'-event of the server\n     * @access public\n     * */\n    async handleRequest(request, response) {\n        try {\n            // analyze request\n            const request_data = await this.analyzeRequest(request);\n            if (this.logging) {\n                console.log(\"request analyzed\", request_data);\n            }\n            // check if request is accepted\n            if (this.checkRequest(request_data, response)) {\n                // check if requested service function is present\n                if (this.hasServiceFunction(request_data)) {\n                    // check if request is authorized\n                    if (this.isAuthorized(request_data.service_function_name, request_data.authorization)) {\n                        // call service functions\n                        await this.invokeServiceFunction(request_data, response);\n                    } else {\n                        if (request_data.authorization.user) {\n                            // invalid authorization provided\n                            response.writeHead(403);\n                        } else {\n                            // no authorization provided but required\n                            response.writeHead(401, {\n                                \"WWW-Authenticate\": \"Basic \" + request_data.service_function_name\n                            });\n                        }\n                    }\n                } else {\n                    response.writeHead(501);\n                }\n            }\n        } catch (error) {\n            console.error(error);\n        } finally {\n            try {\n                response.end();\n            } catch (error) {\n                console.error(error);\n            }\n        }\n    }\n    /**\n     * This method is called when a request is valid and authorized and the requested service function exists.\n     * It invokes the requested service function and writes the result to the response body.\n     * @param {Object} request_data - analyzed representation of the request\n     * @param {http.ServerResponse} response - given by the 'request'-event of the server\n     * @access protected\n     * */\n    async invokeServiceFunction(request_data, response) {\n        const service_function = this.service_manifest[request_data.service_function_name];\n        if (this.logging) {\n            console.log(\"\\x1b[34m\", \"call\", request_data.service_function_name, \"with\", ...request_data.service_function_arguments, \"\\x1b[0m\");\n        }\n        let response_string = \"{}\";\n        try {\n            const response_value = await service_function.call(this.service_manifest, request_data.service_function_arguments);\n            response_string = JSON.stringify(response_value);\n            response.writeHead(200);\n            response.write(response_string);\n        } catch (error) {\n            try {\n                response.writeHead(500);\n            } catch (error) {\n                console.error(error);\n            }\n        }\n    }\n    /**\n     * This method analyzes requests made to the server.\n     * It preprocesses the request to extract essential information.\n     * @param {http.IncomingMessage} request - given by the 'request'-event of the server\n     * @access protected\n     * @return {Object} - a representation of the  essential request properties\n     * */\n    async analyzeRequest(request) {\n        const url_object = url.parse(request.url);\n        let data = \"\";\n        request.on(\"data\", chunk => {\n            data += chunk.toString();\n        });\n        await new Promise((resolve, reject) => {\n            request.on(\"end\", error => {\n                if (error) {\n                    reject(error);\n                } else {\n                    resolve();\n                }\n            });\n        });\n        const query_parameters = querystring.parse(url_object.query);\n        for (const parameter in query_parameters) {\n            query_parameters[parameter] = decodeURIComponent(query_parameters[parameter]);\n        }\n        let service_function_name, service_function_arguments;\n        // console.log(\"analyzeRequest::parse\", data);\n        try {\n            const body = JSON.parse(data);\n            service_function_name = body.service_function;\n            service_function_arguments = body.arguments;\n        } catch (error) {}\n        const accepted = !request.headers.accept || /(application\\/(json|\\*)|\\*\\/\\*)/g.test(request.headers.accept);\n        const {authorization} = request.headers;\n        let user, password;\n        if (authorization) {\n            const decoded_authorization = Buffer.from(authorization.match(/Basic\\ (.+)/)[1], \"base64\").toString();\n            [, user, password] = decoded_authorization.match(/^([^:]+?):(.*)$/);\n        }\n        return {\n            method: request.method,\n            headers: request.headers,\n            pathname: url_object.pathname,\n            data,\n            query_parameters,\n            service_function_name,\n            service_function_arguments,\n            accepted,\n            authorization: {\n                user,\n                password\n            }\n        }\n    }\n    /**\n     * This method is called when a request is analyzed.\n     * It handles the HTTP negotiations.\n     * @param {Object} request_data - analyzed representation of the request\n     * @param {http.ServerResponse} response - given by the 'request'-event of the server\n     * @access protected\n     * @return {boolean} true - if and only if a POST request is accepted and well-formed\n     * */\n    checkRequest(request_data, response) {\n        switch (request_data.method) {\n            case \"POST\":\n                if (this.logging) {\n                    console.log(\"\\x1b[32m\", \"Check\", request_data.method, \"request\", request_data.pathname, \"\\x1b[0m\");\n                }\n                if (request_data.service_function_name === undefined) {\n                    console.log(\"problem\");\n                    response.writeHead(400);\n                    break;\n                }\n                // console.log(\"request headers\", request.headers);\n                if (request_data.accepted) {\n                    return true;\n                } else {\n                    response.writeHead(406, {\n                        Accept: [\"application/json\"]\n                    });\n                }\n                break;\n            case \"OPTIONS\":\n                if (this.logging) {\n                    console.log(\"\\x1b[35m\", \"Detected\", request_data.method, \"request\", \"\\x1b[0m\");\n                }\n                response.writeHead(200, {\n                    \"Access-Control-Request-Methods\": \"OPTIONS\",\n                    \"Access-Control-Allow-Methods\": \"POST,OPTIONS\",\n                    \"Access-Control-Allow-Headers\": \"Authorization\"\n                });\n                break;\n            default:\n                response.writeHead(405, {\n                    Allow: \"OPTIONS,POST\"\n                });\n        }\n        return false;\n    }\n    /**\n     * This method is called to determine whether a request shall be authorized.\n     * This is the default setting which authorizes all request.\n     * It is meant o be overwritten when necessary either by class extension or by the constructor 'options'\n     * @param {string} service_function_name - name or the requested service function\n     * @param {{user: string, password: string}} credentials - credentials to authorize request\n     * @access protected\n     * @return {boolean} true - if and only if the request is authorized\n     * */\n    isAuthorized(service_function_name, {user, password} = {}) {\n        // no authorization required by default\n        return true;\n    }\n    /**\n     * This method is called to determine whether a service function exists.\n     * It checks if the manifest has a property which matches the service function's name and if it's a function.\n     * @param {Object} request_data - analyzed representation of the request\n     * @access protected\n     * @return {boolean} true - if and only if the requested service function exists (and is a function)\n     * */\n    hasServiceFunction(request_data) {\n        let service_function;\n        try {\n            service_function = this.service_manifest[request_data.service_function_name];\n        } catch (error) {\n            console.error(error);\n        }\n        return typeof service_function == \"function\";\n    }\n    /**\n     * This method provides a convenient way to start a server which uses this 'ServiceProvider'.\n     * If a certificate is provided then the server uses HTTPS otherwise HTTP.\n     * @param {number} port - the servers port\n     * @param {Object} options - passed to the http 'createServer' function\n     * @access public\n     * @return {http.Http2Server|http.Http2SecureServer} server - the started server instance\n     * */\n    startServer(port, options) {\n        const http2 = require(\"http2\");\n        if (!options.pfx && (!options.cert || !options.key)) {\n            console.warn(\"insufficient security provided; not using https\");\n            const server = http2.createServer(options, this.handleRequest.bind(this));\n            server.listen(port);\n            return server;\n        }\n        const server = http2.createSecureServer(options, this.handleRequest.bind(this));\n        server.listen(port);\n        return server;\n    }\n};",
+    "static": true,
+    "longname": "src/ServiceProvider.js",
+    "access": null,
+    "description": null,
+    "lineNumber": 1
+  },
+  {
+    "__docId__": 1,
+    "kind": "class",
+    "name": "ServiceProvider",
+    "memberof": "src/ServiceProvider.js",
+    "static": true,
+    "longname": "src/ServiceProvider.js~ServiceProvider",
+    "access": "public",
+    "export": true,
+    "importPath": "servingjs/src/ServiceProvider.js",
+    "importStyle": "ServiceProvider",
+    "description": "",
+    "examples": [
+      "const manifest = {\n    test_function(a,b) {\n        return a+b;\n    }\n};\nconst options = {\n    logging: false,\n    isAuthorized() {\n        return true; \n    }\n};\nconst service_provider = new ServiceProvider(manifest, options);\nservice_provider.startServer(8000);"
+    ],
+    "lineNumber": 22,
+    "interface": false
+  },
+  {
+    "__docId__": 2,
+    "kind": "constructor",
+    "name": "constructor",
+    "memberof": "src/ServiceProvider.js~ServiceProvider",
+    "generator": false,
+    "async": false,
+    "static": false,
+    "longname": "src/ServiceProvider.js~ServiceProvider#constructor",
+    "access": null,
+    "description": "Constructs the ServiceProvider.",
+    "lineNumber": 28,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "service_manifest",
+        "description": "provides the service functions available via the server"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "{logging: boolean, isAuthorized: function}"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options",
+        "description": "logging to console, authorization check function"
+      }
+    ]
+  },
+  {
+    "__docId__": 3,
+    "kind": "member",
+    "name": "logging",
+    "memberof": "src/ServiceProvider.js~ServiceProvider",
+    "static": false,
+    "longname": "src/ServiceProvider.js~ServiceProvider#logging",
+    "access": "public",
+    "description": "Determines whether the server should log to the console.",
+    "lineNumber": 40,
+    "type": {
+      "nullable": null,
+      "types": [
+        "boolean"
+      ],
+      "spread": false,
+      "description": null
+    }
+  },
+  {
+    "__docId__": 4,
+    "kind": "member",
+    "name": "isAuthorized",
+    "memberof": "src/ServiceProvider.js~ServiceProvider",
+    "static": false,
+    "longname": "src/ServiceProvider.js~ServiceProvider#isAuthorized",
+    "access": null,
+    "description": null,
+    "lineNumber": 42,
+    "undocument": true,
+    "unknown": [
+      {
+        "tagName": "@_undocument",
+        "tagValue": ""
+      }
+    ],
+    "type": {
+      "types": [
+        "*"
+      ]
+    }
+  },
+  {
+    "__docId__": 5,
+    "kind": "method",
+    "name": "handleRequest",
+    "memberof": "src/ServiceProvider.js~ServiceProvider",
+    "generator": false,
+    "async": true,
+    "static": false,
+    "longname": "src/ServiceProvider.js~ServiceProvider#handleRequest",
+    "access": "public",
+    "description": "This method handles requests made to the server.\nIt analyzes the incoming request and responds with the appropriate HTTP status.\nIt is meant to be the direct callback of 'createServer'.",
+    "lineNumber": 53,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "http.IncomingMessage"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "request",
+        "description": "given by the 'request'-event of the server"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "http.ServerResponse"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "response",
+        "description": "given by the 'request'-event of the server"
+      }
+    ]
+  },
+  {
+    "__docId__": 6,
+    "kind": "method",
+    "name": "invokeServiceFunction",
+    "memberof": "src/ServiceProvider.js~ServiceProvider",
+    "generator": false,
+    "async": true,
+    "static": false,
+    "longname": "src/ServiceProvider.js~ServiceProvider#invokeServiceFunction",
+    "access": "protected",
+    "description": "This method is called when a request is valid and authorized and the requested service function exists.\nIt invokes the requested service function and writes the result to the response body.",
+    "lineNumber": 100,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "request_data",
+        "description": "analyzed representation of the request"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "http.ServerResponse"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "response",
+        "description": "given by the 'request'-event of the server"
+      }
+    ]
+  },
+  {
+    "__docId__": 7,
+    "kind": "method",
+    "name": "analyzeRequest",
+    "memberof": "src/ServiceProvider.js~ServiceProvider",
+    "generator": false,
+    "async": true,
+    "static": false,
+    "longname": "src/ServiceProvider.js~ServiceProvider#analyzeRequest",
+    "access": "protected",
+    "description": "This method analyzes requests made to the server.\nIt preprocesses the request to extract essential information.",
+    "lineNumber": 126,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "http.IncomingMessage"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "request",
+        "description": "given by the 'request'-event of the server"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "Object"
+      ],
+      "spread": false,
+      "description": "a representation of the  essential request properties"
+    }
+  },
+  {
+    "__docId__": 8,
+    "kind": "method",
+    "name": "checkRequest",
+    "memberof": "src/ServiceProvider.js~ServiceProvider",
+    "generator": false,
+    "async": false,
+    "static": false,
+    "longname": "src/ServiceProvider.js~ServiceProvider#checkRequest",
+    "access": "protected",
+    "description": "This method is called when a request is analyzed.\nIt handles the HTTP negotiations.",
+    "lineNumber": 182,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "request_data",
+        "description": "analyzed representation of the request"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "http.ServerResponse"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "response",
+        "description": "given by the 'request'-event of the server"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "boolean"
+      ],
+      "spread": false,
+      "description": "true - if and only if a POST request is accepted and well-formed"
+    }
+  },
+  {
+    "__docId__": 9,
+    "kind": "method",
+    "name": "isAuthorized",
+    "memberof": "src/ServiceProvider.js~ServiceProvider",
+    "generator": false,
+    "async": false,
+    "static": false,
+    "longname": "src/ServiceProvider.js~ServiceProvider#isAuthorized",
+    "access": "protected",
+    "description": "This method is called to determine whether a request shall be authorized.\nThis is the default setting which authorizes all request.\nIt is meant o be overwritten when necessary either by class extension or by the constructor 'options'",
+    "lineNumber": 228,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "string"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "service_function_name",
+        "description": "name or the requested service function"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "{user: string, password: string}"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "credentials",
+        "description": "credentials to authorize request"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "boolean"
+      ],
+      "spread": false,
+      "description": "true - if and only if the request is authorized"
+    }
+  },
+  {
+    "__docId__": 10,
+    "kind": "method",
+    "name": "hasServiceFunction",
+    "memberof": "src/ServiceProvider.js~ServiceProvider",
+    "generator": false,
+    "async": false,
+    "static": false,
+    "longname": "src/ServiceProvider.js~ServiceProvider#hasServiceFunction",
+    "access": "protected",
+    "description": "This method is called to determine whether a service function exists.\nIt checks if the manifest has a property which matches the service function's name and if it's a function.",
+    "lineNumber": 239,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "request_data",
+        "description": "analyzed representation of the request"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "boolean"
+      ],
+      "spread": false,
+      "description": "true - if and only if the requested service function exists (and is a function)"
+    }
+  },
+  {
+    "__docId__": 11,
+    "kind": "method",
+    "name": "startServer",
+    "memberof": "src/ServiceProvider.js~ServiceProvider",
+    "generator": false,
+    "async": false,
+    "static": false,
+    "longname": "src/ServiceProvider.js~ServiceProvider#startServer",
+    "access": "public",
+    "description": "This method provides a convenient way to start a server which uses this 'ServiceProvider'.\nIf a certificate is provided then the server uses HTTPS otherwise HTTP.",
+    "lineNumber": 256,
+    "params": [
+      {
+        "nullable": null,
+        "types": [
+          "number"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "port",
+        "description": "the servers port"
+      },
+      {
+        "nullable": null,
+        "types": [
+          "Object"
+        ],
+        "spread": false,
+        "optional": false,
+        "name": "options",
+        "description": "passed to the http 'createServer' function"
+      }
+    ],
+    "return": {
+      "nullable": null,
+      "types": [
+        "http.Http2Server",
+        "http.Http2SecureServer"
+      ],
+      "spread": false,
+      "description": "server - the started server instance"
+    }
+  },
+  {
+    "__docId__": 13,
+    "kind": "external",
+    "name": "Infinity",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Infinity",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Infinity",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 14,
+    "kind": "external",
+    "name": "NaN",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/NaN",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~NaN",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 15,
+    "kind": "external",
+    "name": "undefined",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/undefined",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~undefined",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 16,
+    "kind": "external",
+    "name": "null",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/null",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~null",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 17,
+    "kind": "external",
+    "name": "Object",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Object",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 18,
+    "kind": "external",
+    "name": "object",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~object",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 19,
+    "kind": "external",
+    "name": "Function",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Function",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 20,
+    "kind": "external",
+    "name": "function",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~function",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 21,
+    "kind": "external",
+    "name": "Boolean",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Boolean",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 22,
+    "kind": "external",
+    "name": "boolean",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~boolean",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 23,
+    "kind": "external",
+    "name": "Symbol",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Symbol",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 24,
+    "kind": "external",
+    "name": "Error",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Error",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 25,
+    "kind": "external",
+    "name": "EvalError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/EvalError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~EvalError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 26,
+    "kind": "external",
+    "name": "InternalError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/InternalError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~InternalError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 27,
+    "kind": "external",
+    "name": "RangeError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RangeError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~RangeError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 28,
+    "kind": "external",
+    "name": "ReferenceError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ReferenceError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~ReferenceError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 29,
+    "kind": "external",
+    "name": "SyntaxError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SyntaxError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~SyntaxError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 30,
+    "kind": "external",
+    "name": "TypeError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypeError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~TypeError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 31,
+    "kind": "external",
+    "name": "URIError",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/URIError",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~URIError",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 32,
+    "kind": "external",
+    "name": "Number",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Number",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 33,
+    "kind": "external",
+    "name": "number",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~number",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 34,
+    "kind": "external",
+    "name": "Date",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Date",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 35,
+    "kind": "external",
+    "name": "String",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~String",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 36,
+    "kind": "external",
+    "name": "string",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~string",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 37,
+    "kind": "external",
+    "name": "RegExp",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~RegExp",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 38,
+    "kind": "external",
+    "name": "Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 39,
+    "kind": "external",
+    "name": "Int8Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int8Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Int8Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 40,
+    "kind": "external",
+    "name": "Uint8Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint8Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 41,
+    "kind": "external",
+    "name": "Uint8ClampedArray",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8ClampedArray",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint8ClampedArray",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 42,
+    "kind": "external",
+    "name": "Int16Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int16Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Int16Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 43,
+    "kind": "external",
+    "name": "Uint16Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint16Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint16Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 44,
+    "kind": "external",
+    "name": "Int32Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Int32Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Int32Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 45,
+    "kind": "external",
+    "name": "Uint32Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint32Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Uint32Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 46,
+    "kind": "external",
+    "name": "Float32Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float32Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Float32Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 47,
+    "kind": "external",
+    "name": "Float64Array",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float64Array",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Float64Array",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 48,
+    "kind": "external",
+    "name": "Map",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Map",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 49,
+    "kind": "external",
+    "name": "Set",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Set",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 50,
+    "kind": "external",
+    "name": "WeakMap",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakMap",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~WeakMap",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 51,
+    "kind": "external",
+    "name": "WeakSet",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakSet",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~WeakSet",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 52,
+    "kind": "external",
+    "name": "ArrayBuffer",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~ArrayBuffer",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 53,
+    "kind": "external",
+    "name": "DataView",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~DataView",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 54,
+    "kind": "external",
+    "name": "JSON",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~JSON",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 55,
+    "kind": "external",
+    "name": "Promise",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Promise",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 56,
+    "kind": "external",
+    "name": "Generator",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Generator",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Generator",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 57,
+    "kind": "external",
+    "name": "GeneratorFunction",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/GeneratorFunction",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~GeneratorFunction",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 58,
+    "kind": "external",
+    "name": "Reflect",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Reflect",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Reflect",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 59,
+    "kind": "external",
+    "name": "Proxy",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy",
+    "memberof": "BuiltinExternal/ECMAScriptExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/ECMAScriptExternal.js~Proxy",
+    "access": null,
+    "description": "",
+    "lineNumber": 193,
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 61,
+    "kind": "external",
+    "name": "CanvasRenderingContext2D",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/WebAPIExternal.js~CanvasRenderingContext2D",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 62,
+    "kind": "external",
+    "name": "DocumentFragment",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/WebAPIExternal.js~DocumentFragment",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 63,
+    "kind": "external",
+    "name": "Element",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/Element",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/WebAPIExternal.js~Element",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 64,
+    "kind": "external",
+    "name": "Event",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/Event",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/WebAPIExternal.js~Event",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 65,
+    "kind": "external",
+    "name": "Node",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/Node",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/WebAPIExternal.js~Node",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 66,
+    "kind": "external",
+    "name": "NodeList",
+    "externalLink": "https://developer.mozilla.org/en-US/docs/Web/API/NodeList",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/WebAPIExternal.js~NodeList",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 67,
+    "kind": "external",
+    "name": "XMLHttpRequest",
+    "externalLink": "https://developer.mozilla.org/en/docs/Web/API/XMLHttpRequest",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/WebAPIExternal.js~XMLHttpRequest",
+    "access": null,
+    "description": "",
+    "builtinExternal": true
+  },
+  {
+    "__docId__": 68,
+    "kind": "external",
+    "name": "AudioContext",
+    "externalLink": "https://developer.mozilla.org/en/docs/Web/API/AudioContext",
+    "memberof": "BuiltinExternal/WebAPIExternal.js",
+    "static": true,
+    "longname": "BuiltinExternal/WebAPIExternal.js~AudioContext",
+    "access": null,
+    "description": "",
+    "lineNumber": 34,
+    "builtinExternal": true
+  }
+]

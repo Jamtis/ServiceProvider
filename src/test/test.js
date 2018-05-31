@@ -5,7 +5,7 @@ import fs from "fs";
 import http2 from "http2";
 import https from "https";
 import http from "http";
-console.clear();
+// console.clear();
 const test_function_name = "test_function";
 const test_authorized_function_name = "test_authorized_function";
 const test_unimplemented_function_name = "test_unimplemented_function";
