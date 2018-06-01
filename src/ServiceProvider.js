@@ -5,7 +5,7 @@ import querystring from "querystring";
  * @name ServiceProvider
  * @example
  * const manifest = {
- *     test_function(a,b) {
+ *     example_function(a,b) {
  *         return a + b;
  *     }
  * };
@@ -104,7 +104,7 @@ export default class ServiceProvider {
         }
         let response_string = "{}";
         try {
-            const response_value = await service_function.call(this.service_manifest, request_data.service_function_arguments);
+            const response_value = await service_function.apply(this.service_manifest, request_data.service_function_arguments);
             response_string = JSON.stringify(response_value);
             response.writeHead(200);
             response.write(response_string);
@@ -185,8 +185,9 @@ export default class ServiceProvider {
                 if (this.logging) {
                     console.log("\x1b[32m", "Check", request_data.method, "request", request_data.pathname, "\x1b[0m");
                 }
-                if (request_data.service_function_name === undefined) {
-                    console.log("problem");
+                if (request_data.service_function_name === undefined ||
+                    request_data.service_function_arguments != undefined &&
+                    !Array.isArray(request_data.service_function_arguments)) {
                     response.writeHead(400);
                     break;
                 }
@@ -253,7 +254,7 @@ export default class ServiceProvider {
      * @access public
      * @return {http.Http2Server|http.Http2SecureServer} server - the started server instance
      * */
-    startServer(port, options) {
+    startServer(port, options = {}) {
         const http2 = require("http2");
         if (!options.pfx && (!options.cert || !options.key)) {
             console.warn("insufficient security provided; not using https");

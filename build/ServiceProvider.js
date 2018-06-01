@@ -42,7 +42,7 @@ class ServiceProvider {
         this.logging && console.log("[34m", "call", e.service_function_name, "with", ...e.service_function_arguments, "[0m");
         let i = "{}";
         try {
-            const n = await r.call(this.service_manifest, e.service_function_arguments);
+            const n = await r.apply(this.service_manifest, e.service_function_arguments);
             i = JSON.stringify(n), t.writeHead(200), t.write(i)
         } catch (e) {
             try {
@@ -96,8 +96,8 @@ class ServiceProvider {
     checkRequest(e, t) {
         switch (e.method) {
             case "POST":
-                if (this.logging && console.log("[32m", "Check", e.method, "request", e.pathname, "[0m"), void 0 === e.service_function_name) {
-                    console.log("problem"), t.writeHead(400);
+                if (this.logging && console.log("[32m", "Check", e.method, "request", e.pathname, "[0m"), void 0 === e.service_function_name || null != e.service_function_arguments && !Array.isArray(e.service_function_arguments)) {
+                    t.writeHead(400);
                     break
                 }
                 if (e.accepted) return !0;
@@ -134,7 +134,7 @@ class ServiceProvider {
         }
         return "function" == typeof t
     }
-    startServer(e, t) {
+    startServer(e, t = {}) {
         const r = require("http2");
         if (!(t.pfx || t.cert && t.key)) {
             console.warn("insufficient security provided; not using https");

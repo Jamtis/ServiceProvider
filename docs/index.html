@@ -42,9 +42,9 @@
 <p>Specify functions in a manifest file (or just an object) and make it available via a Node.js server.</p>
 <pre><code><code class="source-code prettyprint">const manifest = {
     // specify your functionality here
-    service_function(a, b) {
+    example_function(a, b) {
         return a + b;
-   }
+    }
 };
 const service_provider = new ServiceProvider(manifest);
 const server = service_provider.startServer(8000);</code>
@@ -66,6 +66,11 @@ request.on(&quot;end&quot;, () =&gt; {
     // reap the results
     console.log(&quot;result of service_function&quot;, data);
 });
+// specify the requested function
+request.write(JSON.stringify({
+    service_function: &quot;example_function&quot;,
+    arguments: []
+}));
 // send the request
 request.end();</code>
 </code></pre><p>Easy as that.</p>

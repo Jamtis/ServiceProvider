@@ -3,14 +3,15 @@
 ### Idea
 Specify functions in a manifest file (or just an object) and make it available via a Node.js server.
 
-```
+```const ServiceProvider = require("node_modules/servingjs/build/ServiceProvider.js").default;
 const manifest = {
     // specify your functionality here
-    service_function(a, b) {
+    example_function(a, b) {
+        console.log("called with", a, b);
         return a + b;
-   }
+    }
 };
-const service_provider = new ServiceProvider(manifest);
+const service_provider = new ServiceProvider(manifest, {logging: true});
 const server = service_provider.startServer(8000);
 ```
 
@@ -34,6 +35,11 @@ request.on("end", () => {
     // reap the results
     console.log("result of service_function", data);
 });
+// specify the requested function
+request.write(JSON.stringify({
+    service_function: "example_function",
+    arguments: [3, 39]
+}));
 // send the request
 request.end();
 ```
