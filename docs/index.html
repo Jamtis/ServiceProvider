@@ -38,6 +38,50 @@
 </nav>
 
 <div class="content" data-ice="content"><div data-ice="index" class="github-markdown"><h1 id="serviceprovider">ServiceProvider</h1>
+<h3 id="idea">Idea</h3>
+<p>Specify functions in a manifest file (or just an object) and make it available via a Node.js server.</p>
+<pre><code><code class="source-code prettyprint">const manifest = {
+    // specify your functionality here
+    service_function(a, b) {
+        return a + b;
+   }
+};
+const service_provider = new ServiceProvider(manifest);
+const server = service_provider.startServer(8000);</code>
+</code></pre><p>Now <code>service_function</code> is available in the entire network.
+You can simply invoke it by making a request to the server.</p>
+<pre><code><code class="source-code prettyprint">const http2 = require(&quot;http2&quot;);
+// connect
+const client = http2.connect(&quot;http://localhost:8000&quot;);
+// create a request
+const request = client.request({
+    &quot;:method&quot;: &quot;POST&quot;
+});
+// collect the response data
+let data = &quot;&quot;;
+request.on(&quot;data&quot;, chunk =&gt; {
+    data += chunk;
+});
+request.on(&quot;end&quot;, () =&gt; {
+    // reap the results
+    console.log(&quot;result of service_function&quot;, data);
+});
+// send the request
+request.end();</code>
+</code></pre><p>Easy as that.</p>
+<h3 id="installation">Installation</h3>
+<p><code>npm i servingjs</code></p>
+<h3 id="features">Features</h3>
+<ul>
+<li>http2 (experimental by nodejs)</li>
+<li>server certificates</li>
+<li>POST request are encrypted when using HTTPS</li>
+<li>CORS (working on it)</li>
+</ul>
+<h3 id="docs">Docs</h3>
+<p><a href="https://github.com/jamtis/serviceprovider/blob/master/docs/index.html">View the documentation.</a></p>
+<h3 id="license">LICENSE</h3>
+<p>ISC License</p>
 </div>
 </div>
 

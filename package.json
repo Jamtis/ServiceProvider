@@ -6,6 +6,8 @@
     "devDependencies": {
         "babel-core": "^6.26.3",
         "babel-preset-env": "^1.7.0",
+        "esdoc-integrate-manual-plugin": "^1.0.0",
+        "esdoc-publish-markdown-plugin": "^1.1.0",
         "gulp": "^4.0.0",
         "gulp-babel": "^7.0.1",
         "gulp-beautify-code": "^2.0.3",

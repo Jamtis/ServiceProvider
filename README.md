@@ -10,7 +10,7 @@ const manifest = {
         return a + b;
    }
 };
-const service_provider = new ServiceProvider(manifest,);
+const service_provider = new ServiceProvider(manifest);
 const server = service_provider.startServer(8000);
 ```
 
