@@ -3,7 +3,8 @@
 ### Idea
 Specify functions in a manifest file (or just an object) and make it available via a Node.js server.
 
-```const ServiceProvider = require("node_modules/servingjs/build/ServiceProvider.js").default;
+```
+const ServiceProvider = require("node_modules/servingjs/build/ServiceProvider.js").default;
 const manifest = {
     // specify your functionality here
     example_function(a, b) {

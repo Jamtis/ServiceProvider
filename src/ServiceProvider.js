@@ -185,9 +185,9 @@ export default class ServiceProvider {
                 if (this.logging) {
                     console.log("\x1b[32m", "Check", request_data.method, "request", request_data.pathname, "\x1b[0m");
                 }
-                if (request_data.service_function_name === undefined ||
-                    request_data.service_function_arguments != undefined &&
-                    !Array.isArray(request_data.service_function_arguments)) {
+                if (request_data.service_function_name === undefined
+                    || request_data.service_function_arguments != undefined
+                    && !Array.isArray(request_data.service_function_arguments)) {
                     response.writeHead(400);
                     break;
                 }
