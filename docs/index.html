@@ -32,24 +32,36 @@
 <nav class="navigation" data-ice="nav"><div>
   <ul>
     
-  <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/ServiceProvider.js~ServiceProvider.html">ServiceProvider</a></span></span></li>
+  <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/ServiceClient.js~ServiceClient.html">ServiceClient</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/ServiceProvider.js~ServiceProvider.html">ServiceProvider</a></span></span></li>
 </ul>
 </div>
 </nav>
 
 <div class="content" data-ice="content"><div data-ice="index" class="github-markdown"><h1 id="serviceprovider">ServiceProvider</h1>
-<h3 id="idea">Idea</h3>
+<h3 id="rpc-provider-on-node-js">RPC provider on Node.js</h3>
 <p>Specify functions in a manifest file (or just an object) and make it available via a Node.js server.</p>
-<pre><code><code class="source-code prettyprint">const manifest = {
+<pre><code><code class="source-code prettyprint">import ServiceProvider = &quot;node_modules/servingjs/build/ServiceProvider.js&quot;;
+const manifest = {
     // specify your functionality here
     example_function(a, b) {
+        console.log(&quot;called with&quot;, a, b);
         return a + b;
     }
 };
-const service_provider = new ServiceProvider(manifest);
+const service_provider = new ServiceProvider(manifest, {logging: true});
 const server = service_provider.startServer(8000);</code>
 </code></pre><p>Now <code>service_function</code> is available in the entire network.
 You can simply invoke it by making a request to the server.</p>
+<pre><code><code class="source-code prettyprint">import ServiceClient from &quot;node_modules/servingjs/build/ServiceClient.js&quot;;
+// create the client
+const service_client = new ServiceClient(&quot;http:localhost:8000&quot;);
+// request the example_function
+const result = await service_client.proxy.example_function(3, 39);
+// reap the results
+console.log(&quot;result of example_function&quot;, result);
+// close the client&apos;s connection (Node.js only)</code>
+</code></pre><p>or build the request yourself</p>
 <pre><code><code class="source-code prettyprint">const http2 = require(&quot;http2&quot;);
 // connect
 const client = http2.connect(&quot;http://localhost:8000&quot;);
@@ -64,12 +76,12 @@ request.on(&quot;data&quot;, chunk =&gt; {
 });
 request.on(&quot;end&quot;, () =&gt; {
     // reap the results
-    console.log(&quot;result of service_function&quot;, data);
+    console.log(&quot;result of example_function&quot;, data);
 });
 // specify the requested function
 request.write(JSON.stringify({
     service_function: &quot;example_function&quot;,
-    arguments: []
+    arguments: [3, 39]
 }));
 // send the request
 request.end();</code>

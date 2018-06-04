@@ -1,5 +1,11 @@
 window.esdocSearchIndex = [
   [
+    "servingjs/src/serviceclient.js~serviceclient",
+    "class/src/ServiceClient.js~ServiceClient.html",
+    "<span>ServiceClient</span> <span class=\"search-result-import-path\">servingjs/src/ServiceClient.js</span>",
+    "class"
+  ],
+  [
     "servingjs/src/serviceprovider.js~serviceprovider",
     "class/src/ServiceProvider.js~ServiceProvider.html",
     "<span>ServiceProvider</span> <span class=\"search-result-import-path\">servingjs/src/ServiceProvider.js</span>",
@@ -334,6 +340,60 @@ window.esdocSearchIndex = [
     "https://developer.mozilla.org/en/docs/Web/API/XMLHttpRequest",
     "BuiltinExternal/WebAPIExternal.js~XMLHttpRequest",
     "external"
+  ],
+  [
+    "src/serviceclient.js",
+    "file/src/ServiceClient.js.html",
+    "src/ServiceClient.js",
+    "file"
+  ],
+  [
+    "src/serviceclient.js~serviceclient#_makerequest",
+    "class/src/ServiceClient.js~ServiceClient.html#instance-method-_makeRequest",
+    "src/ServiceClient.js~ServiceClient#_makeRequest",
+    "method"
+  ],
+  [
+    "src/serviceclient.js~serviceclient#_makerequestfetch",
+    "class/src/ServiceClient.js~ServiceClient.html#instance-method-_makeRequestFetch",
+    "src/ServiceClient.js~ServiceClient#_makeRequestFetch",
+    "method"
+  ],
+  [
+    "src/serviceclient.js~serviceclient#_makerequestnode",
+    "class/src/ServiceClient.js~ServiceClient.html#instance-method-_makeRequestNode",
+    "src/ServiceClient.js~ServiceClient#_makeRequestNode",
+    "method"
+  ],
+  [
+    "src/serviceclient.js~serviceclient#close",
+    "class/src/ServiceClient.js~ServiceClient.html#instance-method-close",
+    "src/ServiceClient.js~ServiceClient#close",
+    "method"
+  ],
+  [
+    "src/serviceclient.js~serviceclient#constructor",
+    "class/src/ServiceClient.js~ServiceClient.html#instance-constructor-constructor",
+    "src/ServiceClient.js~ServiceClient#constructor",
+    "method"
+  ],
+  [
+    "src/serviceclient.js~serviceclient#options",
+    "class/src/ServiceClient.js~ServiceClient.html#instance-member-options",
+    "src/ServiceClient.js~ServiceClient#options",
+    "member"
+  ],
+  [
+    "src/serviceclient.js~serviceclient#proxy",
+    "class/src/ServiceClient.js~ServiceClient.html#instance-member-proxy",
+    "src/ServiceClient.js~ServiceClient#proxy",
+    "member"
+  ],
+  [
+    "src/serviceclient.js~serviceclient#url",
+    "class/src/ServiceClient.js~ServiceClient.html#instance-member-url",
+    "src/ServiceClient.js~ServiceClient#url",
+    "member"
   ],
   [
     "src/serviceprovider.js",

@@ -26,6 +26,10 @@ var _http3 = require("http");
 
 var _http4 = _interopRequireDefault(_http3);
 
+var _test_function_declaration = require("./test_function_declaration.js");
+
+var _test_function_declaration2 = _interopRequireDefault(_test_function_declaration);
+
 function _interopRequireWildcard(obj) {
     if (obj && obj.__esModule) {
         return obj;
@@ -47,171 +51,7 @@ function _interopRequireDefault(obj) {
     };
 }
 
-// console.clear();
-const test_function_name = "test_function";
-const test_authorized_function_name = "test_authorized_function";
-const test_unimplemented_function_name = "test_unimplemented_function";
-const test_throwing_function_name = "test_throwing_function";
-const test_function_arguments = [3, 39];
-const test_function_result = 42;
-describe("HTTP setup", () => {
-    const options = {
-        allowHTTP1: true,
-        enablePush: true
-    };
-    const test_port = 9601;
-    const service_provider = new _ServiceProvider2.default(service_manifest, {
-        logging: false
-    });
-    const server = service_provider.startServer(test_port, options);
-    server.on("error", error => {
-        _assert.strict.fail(error.message);
-    });
-    const client = _http2.default.connect("http://localhost:" + test_port, {});
-    client.on("error", error => {
-        _assert.strict.fail(error.message);
-    });
-    describe("METHOD handling", () => {
-        it("OPTIONS handling", done => {
-            const request = client.request({
-                ":method": "OPTIONS"
-            });
-            request.setEncoding("utf8");
-            request.on("response", headers => {
-                // console.log("server response headers", headers);
-                _assert.strict.equal(headers[":status"], 200);
-                _assert.strict.equal(headers["access-control-allow-methods"], "POST,OPTIONS");
-                // done();
-            });
-            let data = "";
-            request.on("data", chunk => {
-                data += chunk;
-            });
-            request.on("end", () => {
-                // console.log("request end", data);
-                done();
-            });
-            request.end();
-        });
-        it("POST handling", done => {
-            const request = client.request({
-                ":method": "POST"
-            });
-            request.setEncoding("utf8");
-            request.on("response", headers => {
-                // console.log("server response headers", headers);
-                _assert.strict.equal(headers[":status"], 200);
-            }); {
-                let data = "";
-                request.on("data", chunk => {
-                    data += chunk;
-                });
-                request.on("end", () => {
-                    // console.log("request end", data);
-                    _assert.strict.doesNotThrow(JSON.parse.bind(JSON, data));
-                    const value = JSON.parse(data);
-                    _assert.strict.equal(value, test_function_result);
-                    done();
-                });
-            }
-            request.write(JSON.stringify({
-                service_function: test_function_name,
-                arguments: test_function_arguments
-            }));
-            request.end();
-        });
-        it("GET not allowed", done => {
-            const request = client.request({
-                ":method": "GET"
-            });
-            request.setEncoding("utf8");
-            request.on("response", headers => {
-                // console.log("server response headers", headers);
-                _assert.strict.equal(headers[":status"], 405);
-                _assert.strict.equal(headers["allow"], "OPTIONS,POST");
-                done();
-            });
-            request.end();
-        });
-        it("DELETE not allowed", done => {
-            const request = client.request({
-                ":method": "DELETE"
-            });
-            request.setEncoding("utf8");
-            request.on("response", headers => {
-                // console.log("server response headers", headers);
-                _assert.strict.equal(headers[":status"], 405);
-                _assert.strict.equal(headers["allow"], "OPTIONS,POST");
-                done();
-            });
-            request.end();
-        });
-        it("PUT not allowed", done => {
-            const request = client.request({
-                ":method": "PUT"
-            });
-            request.setEncoding("utf8");
-            request.on("response", headers => {
-                // console.log("server response headers", headers);
-                _assert.strict.equal(headers[":status"], 405);
-                _assert.strict.equal(headers["allow"], "OPTIONS,POST");
-                done();
-            });
-            request.end();
-        });
-        it("POST unimplemented function returns 501", done => {
-            const request = client.request({
-                ":method": "POST"
-            });
-            request.setEncoding("utf8");
-            request.on("response", headers => {
-                // console.log("server response headers", headers);
-                _assert.strict.equal(headers[":status"], 501);
-                done();
-            });
-            request.write(JSON.stringify({
-                service_function: test_unimplemented_function_name
-            }));
-            request.end();
-        });
-        it("POST throwing function returns 500", done => {
-            const request = client.request({
-                ":method": "POST"
-            });
-            request.setEncoding("utf8");
-            request.on("response", headers => {
-                // console.log("server response headers", headers);
-                _assert.strict.equal(headers[":status"], 500);
-                done();
-            });
-            request.write(JSON.stringify({
-                service_function: test_throwing_function_name
-            }));
-            request.end();
-        });
-    });
-    describe("Compatibility", () => {
-        it("HTTP1 not supported", done => {
-            const options = {
-                hostname: "localhost",
-                port: test_port,
-                path: "/",
-                method: "POST"
-            };
-            const request = _http4.default.get(options, response => {
-                _assert.strict.fail("HTTP1 succeeded");
-            });
-            request.on("error", error => {
-                done();
-            });
-        });
-    });
-    after(() => {
-        client.close();
-        server.close();
-    });
-});
-describe("HTTPS setup", () => {
+describe("HTTPS provider setup", () => {
     const key = _fs2.default.readFileSync("test/certificate/root-ca.key");
     const cert = _fs2.default.readFileSync("test/certificate/root-ca.crt");
     const options = {
@@ -252,7 +92,6 @@ describe("HTTPS setup", () => {
             const request = client.request({
                 ":method": "OPTIONS"
             });
-            request.setEncoding("utf8");
             request.on("response", headers => {
                 // console.log("server response headers", headers);
                 _assert.strict.equal(headers[":status"], 200, "Status not OK");
@@ -273,7 +112,6 @@ describe("HTTPS setup", () => {
             const request = client.request({
                 ":method": "POST"
             });
-            request.setEncoding("utf8");
             request.on("response", headers => {
                 // console.log("server response headers", headers);
                 _assert.strict.equal(headers[":status"], 200);
@@ -286,13 +124,13 @@ describe("HTTPS setup", () => {
                     // console.log("request end", data);
                     _assert.strict.doesNotThrow(JSON.parse.bind(JSON, data));
                     const value = JSON.parse(data);
-                    _assert.strict.equal(value, test_function_result);
+                    _assert.strict.equal(value, _test_function_declaration2.default.result);
                     done();
                 });
             }
             request.write(JSON.stringify({
-                service_function: test_function_name,
-                arguments: test_function_arguments
+                service_function: _test_function_declaration2.default.name,
+                arguments: _test_function_declaration2.default.arguments
             }));
             request.end();
         });
@@ -300,7 +138,6 @@ describe("HTTPS setup", () => {
             const request = client.request({
                 ":method": "GET"
             });
-            request.setEncoding("utf8");
             request.on("response", headers => {
                 // console.log("server response headers", headers);
                 _assert.strict.equal(headers[":status"], 405);
@@ -313,7 +150,6 @@ describe("HTTPS setup", () => {
             const request = client.request({
                 ":method": "DELETE"
             });
-            request.setEncoding("utf8");
             request.on("response", headers => {
                 // console.log("server response headers", headers);
                 _assert.strict.equal(headers[":status"], 405);
@@ -326,7 +162,6 @@ describe("HTTPS setup", () => {
             const request = client.request({
                 ":method": "PUT"
             });
-            request.setEncoding("utf8");
             request.on("response", headers => {
                 // console.log("server response headers", headers);
                 _assert.strict.equal(headers[":status"], 405);
@@ -339,29 +174,27 @@ describe("HTTPS setup", () => {
             const request = client.request({
                 ":method": "POST"
             });
-            request.setEncoding("utf8");
             request.on("response", headers => {
                 // console.log("server response headers", headers);
                 _assert.strict.equal(headers[":status"], 501);
                 done();
             });
             request.write(JSON.stringify({
-                service_function: test_unimplemented_function_name
+                service_function: _test_function_declaration2.default.unimplemented_name
             }));
             request.end();
         });
-        it("POST throwing function returns 500", done => {
+        it("POST throwing function returns 502", done => {
             const request = client.request({
                 ":method": "POST"
             });
-            request.setEncoding("utf8");
             request.on("response", headers => {
                 // console.log("server response headers", headers);
-                _assert.strict.equal(headers[":status"], 500);
+                _assert.strict.equal(headers[":status"], 502);
                 done();
             });
             request.write(JSON.stringify({
-                service_function: test_throwing_function_name
+                service_function: _test_function_declaration2.default.throwing_name
             }));
             request.end();
         });
@@ -385,7 +218,7 @@ describe("HTTPS setup", () => {
                     // console.log("request end", data);
                     _assert.strict.doesNotThrow(JSON.parse.bind(JSON, data));
                     const value = JSON.parse(data);
-                    _assert.strict.equal(value, test_function_result);
+                    _assert.strict.equal(value, _test_function_declaration2.default.result);
                     done();
                 });
             });
@@ -393,8 +226,8 @@ describe("HTTPS setup", () => {
                 _assert.strict.fail(error.message);
             });
             request.write(JSON.stringify({
-                service_function: test_function_name,
-                arguments: test_function_arguments
+                service_function: _test_function_declaration2.default.name,
+                arguments: _test_function_declaration2.default.arguments
             }));
             request.end();
         });
@@ -413,7 +246,6 @@ describe("HTTPS setup", () => {
                 ":method": "POST",
                 "Authorization": "Basic " + Buffer.from(test_authorization_user + ":" + test_authorization_password).toString("base64")
             });
-            request.setEncoding("utf8");
             request.on("response", headers => {
                 // console.log("server response headers", headers);
                 _assert.strict.equal(headers[":status"], 200);
@@ -426,13 +258,13 @@ describe("HTTPS setup", () => {
                     // console.log("request end", data);
                     _assert.strict.doesNotThrow(JSON.parse.bind(JSON, data));
                     const value = JSON.parse(data);
-                    _assert.strict.equal(value, test_function_result);
+                    _assert.strict.equal(value, _test_function_declaration2.default.result);
                     done();
                 });
             }
             request.write(JSON.stringify({
-                service_function: test_authorized_function_name,
-                arguments: test_function_arguments
+                service_function: _test_function_declaration2.default.authorized_name,
+                arguments: _test_function_declaration2.default.arguments
             }));
             request.end();
         });
@@ -440,16 +272,15 @@ describe("HTTPS setup", () => {
             const request = client.request({
                 ":method": "POST"
             });
-            request.setEncoding("utf8");
             request.on("response", headers => {
                 // console.log("server response headers", headers);
                 _assert.strict.equal(headers[":status"], 401);
-                _assert.strict.equal(headers["www-authenticate"], "Basic " + test_authorized_function_name);
+                _assert.strict.equal(headers["www-authenticate"], "Basic " + _test_function_declaration2.default.authorized_name);
                 done();
             });
             request.write(JSON.stringify({
-                service_function: test_authorized_function_name,
-                arguments: test_function_arguments
+                service_function: _test_function_declaration2.default.authorized_name,
+                arguments: _test_function_declaration2.default.arguments
             }));
             request.end();
         });
@@ -458,15 +289,14 @@ describe("HTTPS setup", () => {
                 ":method": "POST",
                 "Authorization": "Basic " + Buffer.from(test_authorization_user + "+:+" + test_authorization_password).toString("base64")
             });
-            request.setEncoding("utf8");
             request.on("response", headers => {
                 // console.log("server response headers", headers);
                 _assert.strict.equal(headers[":status"], 403);
                 done();
             });
             request.write(JSON.stringify({
-                service_function: test_authorized_function_name,
-                arguments: test_function_arguments
+                service_function: _test_function_declaration2.default.authorized_name,
+                arguments: _test_function_declaration2.default.arguments
             }));
             request.end();
         });

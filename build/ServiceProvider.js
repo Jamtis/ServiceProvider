@@ -43,10 +43,10 @@ class ServiceProvider {
         let i = "{}";
         try {
             const n = await r.apply(this.service_manifest, e.service_function_arguments);
-            i = JSON.stringify(n), t.writeHead(200), t.write(i)
+            i = JSON.stringify(n), t.writeHead(200), this.logging && console.log("response_string", i), t.write(i)
         } catch (e) {
             try {
-                t.writeHead(500)
+                t.writeHead(502), t.write(e.message)
             } catch (e) {
                 console.error(e)
             }

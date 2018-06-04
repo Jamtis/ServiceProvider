@@ -32,7 +32,8 @@
 <nav class="navigation" data-ice="nav"><div>
   <ul>
     
-  <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/ServiceProvider.js~ServiceProvider.html">ServiceProvider</a></span></span></li>
+  <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/ServiceClient.js~ServiceClient.html">ServiceClient</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/ServiceProvider.js~ServiceProvider.html">ServiceProvider</a></span></span></li>
 </ul>
 </div>
 </nav>
@@ -44,6 +45,7 @@ import querystring from &quot;querystring&quot;;
 /**
  * @name ServiceProvider
  * @example
+ * import ServiceProvider = &quot;node_modules/servingjs/build/ServiceProvider.js&quot;;
  * const manifest = {
  *     example_function(a,b) {
  *         return a + b;
@@ -56,7 +58,8 @@ import querystring from &quot;querystring&quot;;
  *     }
  * };
  * const service_provider = new ServiceProvider(manifest, options);
- * service_provider.startServer(8000);
+ * const server = service_provider.startServer(8000);
+ * // server.close();
  * @access public
  * */
 export default class ServiceProvider {
@@ -147,10 +150,14 @@ export default class ServiceProvider {
             const response_value = await service_function.apply(this.service_manifest, request_data.service_function_arguments);
             response_string = JSON.stringify(response_value);
             response.writeHead(200);
+            if (this.logging) {
+                console.log(&quot;response_string&quot;, response_string);
+            }
             response.write(response_string);
         } catch (error) {
             try {
-                response.writeHead(500);
+                response.writeHead(502);
+                response.write(error.message);
             } catch (error) {
                 console.error(error);
             }
@@ -225,9 +232,9 @@ export default class ServiceProvider {
                 if (this.logging) {
                     console.log(&quot;\x1b[32m&quot;, &quot;Check&quot;, request_data.method, &quot;request&quot;, request_data.pathname, &quot;\x1b[0m&quot;);
                 }
-                if (request_data.service_function_name === undefined ||
-                    request_data.service_function_arguments != undefined &amp;&amp;
-                    !Array.isArray(request_data.service_function_arguments)) {
+                if (request_data.service_function_name === undefined
+                    || request_data.service_function_arguments != undefined
+                    &amp;&amp; !Array.isArray(request_data.service_function_arguments)) {
                     response.writeHead(400);
                     break;
                 }

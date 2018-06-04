@@ -4,6 +4,7 @@ import querystring from "querystring";
 /**
  * @name ServiceProvider
  * @example
+ * import ServiceProvider = "node_modules/servingjs/build/ServiceProvider.js";
  * const manifest = {
  *     example_function(a,b) {
  *         return a + b;
@@ -16,7 +17,8 @@ import querystring from "querystring";
  *     }
  * };
  * const service_provider = new ServiceProvider(manifest, options);
- * service_provider.startServer(8000);
+ * const server = service_provider.startServer(8000);
+ * // server.close();
  * @access public
  * */
 export default class ServiceProvider {
@@ -107,10 +109,14 @@ export default class ServiceProvider {
             const response_value = await service_function.apply(this.service_manifest, request_data.service_function_arguments);
             response_string = JSON.stringify(response_value);
             response.writeHead(200);
+            if (this.logging) {
+                console.log("response_string", response_string);
+            }
             response.write(response_string);
         } catch (error) {
             try {
-                response.writeHead(500);
+                response.writeHead(502);
+                response.write(error.message);
             } catch (error) {
                 console.error(error);
             }

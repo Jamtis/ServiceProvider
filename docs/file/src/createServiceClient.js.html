@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl" href="../../">
+  <title data-ice="title">src/createServiceClient.js | API Document</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  
+  
+  <script src="script/manual.js"></script>
+</head>
+<body class="layout-container" data-ice="rootContainer">
+
+<header>
+  <a href="./">Home</a>
+  
+  <a href="identifiers.html">Reference</a>
+  <a href="source.html">Source</a>
+  
+  <a data-ice="repoURL" href="https://github.com/jamtis/ServiceProvider" class="repo-url-github">Repository</a>
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+</header>
+
+<nav class="navigation" data-ice="nav"><div>
+  <ul>
+    
+  <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/ServiceClient.js~ServiceProxy.html">ServiceProxy</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/ServiceProvider.js~ServiceProvider.html">ServiceProvider</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-createServiceClient">createServiceClient</a></span></span></li>
+</ul>
+</div>
+</nav>
+
+<div class="content" data-ice="content"><h1 data-ice="title">src/createServiceClient.js</h1>
+<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">let create_wrapper_function;
+if (typeof fetch == &quot;function&quot;) {
+        create_wrapper_function = url =&gt; service_function =&gt; async (..._arguments) =&gt; {
+        const response = await fetch(url, {
+            method: &quot;POST&quot;,
+            body: JSON.stringify({
+                service_function,
+                arguments: _arguments
+            })
+        });
+        if (response.status != 200) {
+            try {
+                return await response.json();
+            } finally {
+                console.warn(&quot;Response is not parsable as JSON but server sent HTTP status 200&quot;);
+            }
+        } else {
+            switch (response.status) {
+                case 400:
+                case 405:
+                case 406:
+                    throw new Error(&quot;Internal protocol error: HTTP status &quot; + response.status);
+                case 502:
+                    throw new Error(await response.text());
+            }
+        }
+        throw new Error(&quot;Unknown error&quot;);
+    };
+} else if (typeof require == &quot;function&quot;) {
+    const http2 = require(&quot;http2&quot;);
+    if (http2) {
+        create_wrapper_function = url =&gt; service_function =&gt; (..._arguments) =&gt; {
+            return new Promise((resolve, reject) =&gt; {
+                try {
+                    const client = http2.connect(url, {});
+                    client.on(&quot;error&quot;, error =&gt; {
+                        reject(error);
+                    });
+                    const request = client.request({
+                        &quot;:method&quot;: &quot;POST&quot;
+                    });
+                    request.on(&quot;response&quot;, headers =&gt; {
+                        if (headers[&quot;:status&quot;] != 200) {
+                            reject(new Error(&quot;Response status &quot; + headers[&quot;:status&quot;]));
+                        }
+                    });
+                    {
+                        let data = &quot;&quot;;
+                        request.on(&quot;data&quot;, chunk =&gt; {
+                            data += chunk;
+                        });
+                        request.on(&quot;end&quot;, () =&gt; {
+                            try {
+                                const value = JSON.parse(data);
+                                resolve(value);
+                            } catch (error) {
+                                console.warn(&quot;Response is not parsable as JSON but server sent HTTP status 200&quot;);
+                                reject(new Error(&quot;Internal protocol error&quot;));
+                            } finally {
+                                try {
+                                    client.close();
+                                } catch (error) {
+                                    console.error(error);
+                                }
+                            }
+                        });
+                    }
+                    request.write(JSON.stringify({
+                        service_function,
+                        arguments: _arguments
+                    }));
+                    request.end();
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        };
+    }
+}
+
+export default url =&gt; {
+    const wrapper_function = create_wrapper_function(url);
+    return new Proxy({
+    }, {
+        get(target, name) {
+            console.log(&quot;get&quot;, name);
+            return wrapper_function(name);
+        }
+    });
+};</code></pre>
+
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(0.5.2)</span><img src="./image/esdoc-logo-mini-black.png"></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>

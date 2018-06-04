@@ -32,19 +32,20 @@
 <nav class="navigation" data-ice="nav"><div>
   <ul>
     
-  <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/ServiceProvider.js~ServiceProvider.html">ServiceProvider</a></span></span></li>
+  <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/ServiceClient.js~ServiceClient.html">ServiceClient</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/ServiceProvider.js~ServiceProvider.html">ServiceProvider</a></span></span></li>
 </ul>
 </div>
 </nav>
 
 <div class="content" data-ice="content"><div class="header-notice">
-  <div data-ice="importPath" class="import-path"><pre class="prettyprint"><code data-ice="importPathCode">import ServiceProvider from &apos;<span><a href="file/src/ServiceProvider.js.html#lineNumber22">servingjs/src/ServiceProvider.js</a></span>&apos;</code></pre></div>
+  <div data-ice="importPath" class="import-path"><pre class="prettyprint"><code data-ice="importPathCode">import ServiceProvider from &apos;<span><a href="file/src/ServiceProvider.js.html#lineNumber24">servingjs/src/ServiceProvider.js</a></span>&apos;</code></pre></div>
   <span data-ice="access">public</span>
   <span data-ice="kind">class</span>
   
   
   
-  <span data-ice="source">| <span><a href="file/src/ServiceProvider.js.html#lineNumber22">source</a></span></span>
+  <span data-ice="source">| <span><a href="file/src/ServiceProvider.js.html#lineNumber24">source</a></span></span>
 </div>
 
 <div class="self-detail detail">
@@ -74,7 +75,8 @@
     
   <div class="example-doc" data-ice="exampleDoc">
       
-      <pre class="prettyprint source-code"><code data-ice="exampleCode">const manifest = {
+      <pre class="prettyprint source-code"><code data-ice="exampleCode">import ServiceProvider = &quot;node_modules/servingjs/build/ServiceProvider.js&quot;;
+const manifest = {
     example_function(a,b) {
         return a + b;
     }
@@ -86,7 +88,8 @@ const options = {
     }
 };
 const service_provider = new ServiceProvider(manifest, options);
-service_provider.startServer(8000);</code></pre>
+const server = service_provider.startServer(8000);
+// server.close();</code></pre>
     </div>
 </div>
 
@@ -395,7 +398,7 @@ service_provider.startServer(8000);</code></pre>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/ServiceProvider.js.html#lineNumber28">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/ServiceProvider.js.html#lineNumber30">source</a></span></span>
     </span>
   </h3>
 
@@ -466,7 +469,7 @@ service_provider.startServer(8000);</code></pre>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/ServiceProvider.js.html#lineNumber40">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/ServiceProvider.js.html#lineNumber42">source</a></span></span>
     </span>
   </h3>
 
@@ -513,7 +516,7 @@ service_provider.startServer(8000);</code></pre>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/ServiceProvider.js.html#lineNumber53">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/ServiceProvider.js.html#lineNumber55">source</a></span></span>
     </span>
   </h3>
 
@@ -583,7 +586,7 @@ It is meant to be the direct callback of &apos;createServer&apos;.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/ServiceProvider.js.html#lineNumber257">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/ServiceProvider.js.html#lineNumber263">source</a></span></span>
     </span>
   </h3>
 
@@ -667,7 +670,7 @@ If a certificate is provided then the server uses HTTPS otherwise HTTP.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/ServiceProvider.js.html#lineNumber126">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/ServiceProvider.js.html#lineNumber132">source</a></span></span>
     </span>
   </h3>
 
@@ -742,7 +745,7 @@ It preprocesses the request to extract essential information.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/ServiceProvider.js.html#lineNumber182">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/ServiceProvider.js.html#lineNumber188">source</a></span></span>
     </span>
   </h3>
 
@@ -824,7 +827,7 @@ It handles the HTTP negotiations.</p>
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/ServiceProvider.js.html#lineNumber240">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/ServiceProvider.js.html#lineNumber246">source</a></span></span>
     </span>
   </h3>
 
@@ -899,7 +902,7 @@ It checks if the manifest has a property which matches the service function&apos
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/ServiceProvider.js.html#lineNumber100">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/ServiceProvider.js.html#lineNumber102">source</a></span></span>
     </span>
   </h3>
 
@@ -968,7 +971,7 @@ It invokes the requested service function and writes the result to the response 
     <span class="right-info">
       
       
-      <span data-ice="source"><span><a href="file/src/ServiceProvider.js.html#lineNumber229">source</a></span></span>
+      <span data-ice="source"><span><a href="file/src/ServiceProvider.js.html#lineNumber235">source</a></span></span>
     </span>
   </h3>
 

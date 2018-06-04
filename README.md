@@ -1,10 +1,10 @@
 # ServiceProvider
 
-### Idea
+### RPC provider on Node.js
 Specify functions in a manifest file (or just an object) and make it available via a Node.js server.
 
 ```
-const ServiceProvider = require("node_modules/servingjs/build/ServiceProvider.js").default;
+import ServiceProvider = "node_modules/servingjs/build/ServiceProvider.js";
 const manifest = {
     // specify your functionality here
     example_function(a, b) {
@@ -20,6 +20,17 @@ Now `service_function` is available in the entire network.
 You can simply invoke it by making a request to the server.
 
 ```
+import ServiceClient from "node_modules/servingjs/build/ServiceClient.js";
+// create the client
+const service_client = new ServiceClient("http:localhost:8000");
+// request the example_function
+const result = await service_client.proxy.example_function(3, 39);
+// reap the results
+console.log("result of example_function", result);
+// close the client's connection (Node.js only)
+```
+or build the request yourself
+```
 const http2 = require("http2");
 // connect
 const client = http2.connect("http://localhost:8000");
@@ -34,7 +45,7 @@ request.on("data", chunk => {
 });
 request.on("end", () => {
     // reap the results
-    console.log("result of service_function", data);
+    console.log("result of example_function", data);
 });
 // specify the requested function
 request.write(JSON.stringify({

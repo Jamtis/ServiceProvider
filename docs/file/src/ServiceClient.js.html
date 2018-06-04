@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl" href="../../">
+  <title data-ice="title">src/ServiceClient.js | API Document</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  
+  
+  <script src="script/manual.js"></script>
+</head>
+<body class="layout-container" data-ice="rootContainer">
+
+<header>
+  <a href="./">Home</a>
+  
+  <a href="identifiers.html">Reference</a>
+  <a href="source.html">Source</a>
+  
+  <a data-ice="repoURL" href="https://github.com/jamtis/ServiceProvider" class="repo-url-github">Repository</a>
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+</header>
+
+<nav class="navigation" data-ice="nav"><div>
+  <ul>
+    
+  <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/ServiceClient.js~ServiceClient.html">ServiceClient</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/ServiceProvider.js~ServiceProvider.html">ServiceProvider</a></span></span></li>
+</ul>
+</div>
+</nav>
+
+<div class="content" data-ice="content"><h1 data-ice="title">src/ServiceClient.js</h1>
+<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">/**
+ * @name ServiceClient
+ * @example
+ * import ServiceClient from &quot;node_modules/servingjs/build/ServiceClient.js&quot;;
+ * const service_provider = new ServiceClient(&quot;http://localhost:8000&quot;);
+ * const result = await service_client.proxy.example_function(3, 39);
+ * // client.close(); // (Node.js only)
+ * @access public
+ * */
+export default class ServiceClient {
+    /**
+     * Constructs the ServiceClient.
+     * @param {string} url - service provider location
+     * @param {object} options - passed to http2.connect|fetch
+     * */
+    constructor(url, options) {
+        /**
+         * Specifies the service provider&apos;s location.
+         * @type {string}
+         * @access protected
+         * */
+        this.url = url;
+        /**
+         * Specifies the service provider&apos;s location.
+         * @type {object}
+         * @access protected
+         * */
+        this.options = options;
+        const service_client = this;
+        /**
+         * Provides a proxy to adress service functions like object properties.
+         * @type {Proxy}
+         * @access public
+         * */
+        this.proxy = new Proxy({}, {
+            get(target, property_name) {
+                return service_client._makeRequest(property_name);
+            }
+        });
+    }
+    /**
+     * This method closes the http2 client on Node.js.
+     * In a browser context this method does nothing.
+     * @return {boolean} true - on Node.js
+     * @access public
+     * */
+    async close() {
+        if (this.client) {
+            await new Promise(resolve =&gt; {
+                this.client.close(resolve);
+            });
+            return true;
+        } else {
+            return false;
+        }
+    }
+    /**
+     * This method replaces itself a the first invocation with either the `_makeRequestFetch` or the `_makeRequestNode` method according to the context.
+     * Subsequently calls the replacing method.
+     * @param {string} service_function_name - name of the requested service function
+     * @return {*} response_value - response from the requested service function
+     * @access protected
+     * */
+    _makeRequest(service_function_name) {
+        // overwrite this method at the first invocation
+        if (typeof fetch == &quot;function&quot;) {
+            this._makeRequest = this._makeRequestFetch;
+        } else if (typeof require == &quot;function&quot;) {
+            const http2 = require(&quot;http2&quot;);
+            if (http2) {
+                global.http2 = http2;
+                this._makeRequest = this._makeRequestNode;
+            } else {
+                throw new Error(&quot;Neither fetch nor http2 available&quot;);
+            }
+        }
+        return this._makeRequest(service_function_name);
+    }
+    /**
+     * This method make the network request when `fetch` is available.
+     * @param {string} service_function_name - name of the requested service function
+     * @return {*} response_value - response from the requested service function
+     * @access protected
+     * */
+    _makeRequestFetch(service_function_name) {
+        const service_client = this;
+        return async (..._arguments) =&gt; {
+            const response = await fetch(service_client.url, Object.assign({
+                method: &quot;POST&quot;,
+                body: JSON.stringify({
+                    service_function: service_function_name,
+                    arguments: _arguments
+                })
+            }, service_client.options));
+            if (response.status == 200) {
+                try {
+                    return await response.json();
+                } catch (error) {
+                    console.warn(&quot;Response is not parsable as JSON but server sent HTTP status 200&quot;);
+                    console.error(error);
+                }
+            } else {
+                switch (response.status) {
+                    case 400:
+                    case 405:
+                    case 406:
+                        throw new Error(&quot;Internal protocol error: HTTP status &quot; + response.status);
+                    case 502:
+                        throw new Error(await response.text());
+                }
+            }
+            throw new Error(&quot;Unknown error: HTTP status &quot; + response.status);
+        };
+    }
+    /**
+     * This method make the network request when `http2` is available (on Node.js).
+     * @param {string} service_function_name - name of the requested service function
+     * @return {*} response_value - response from the requested service function
+     * @access protected
+     * */
+    _makeRequestNode(service_function_name) {
+        const service_client = this;
+        return (..._arguments) =&gt; new Promise((resolve, reject) =&gt; {
+            try {
+                if (!service_client.client) {
+                    const client = http2.connect(service_client.url, service_client.options);
+                    service_client.client = client;
+                }
+                const {client} = service_client;
+                if (client.closed) {
+                    reject();
+                }
+                client.on(&quot;error&quot;, error =&gt; {
+                    reject(error);
+                });
+                const request = client.request({
+                    &quot;:method&quot;: &quot;POST&quot;
+                });
+                request.on(&quot;response&quot;, headers =&gt; {
+                    if (headers[&quot;:status&quot;] != 200) {
+                        reject(new Error(&quot;Response status &quot; + headers[&quot;:status&quot;]));
+                    }
+                });
+                let data = &quot;&quot;;
+                request.on(&quot;data&quot;, chunk =&gt; {
+                    data += chunk;
+                });
+                request.on(&quot;end&quot;, () =&gt; {
+                    try {
+                        const value = JSON.parse(data);
+                        resolve(value);
+                    } catch (error) {
+                        console.warn(&quot;Response is not parsable as JSON&quot;);
+                        reject(new Error(&quot;Unknown error&quot;));
+                    }
+                });
+                request.write(JSON.stringify({
+                    service_function: service_function_name,
+                    arguments: _arguments
+                }));
+                request.end();
+            } catch (error) {
+                reject(error);
+            }
+        });
+    };
+}</code></pre>
+
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(0.5.2)</span><img src="./image/esdoc-logo-mini-black.png"></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>
