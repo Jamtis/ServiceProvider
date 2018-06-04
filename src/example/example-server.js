@@ -2,9 +2,9 @@ import ServiceProvider from "../ServiceProvider.js";
 import * as service_manifest from "../../test/service_manifest.js";
 import fs from "fs";
 const options = {
-    key: fs.readFileSync("test/certificate/root-ca.key"),
-    passphrase: "password",
-    cert: fs.readFileSync("test/certificate/root-ca.crt"),
+    // key: fs.readFileSync("test/certificate/root-ca.key"),
+    // passphrase: "password",
+    // cert: fs.readFileSync("test/certificate/root-ca.crt"),
     allowHTTP1: true,
     enablePush: true
 };
@@ -15,8 +15,8 @@ server.on("stream", (stream, headers) => {
     console.log("here", headers);
 });
 import http2 from "http2";
-const unauthorized_client = http2.connect("https://localhost:" + test_port, {
-    ca: fs.readFileSync("test/certificate/root-ca.crt")
+const unauthorized_client = http2.connect("http://localhost:" + test_port, {
+    // ca: fs.readFileSync("test/certificate/root-ca.crt")
 });
 unauthorized_client.on("error", error => {
     console.error(error);

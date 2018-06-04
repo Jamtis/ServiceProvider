@@ -42,6 +42,7 @@
 <h3 id="rpc-provider-on-node-js">RPC provider on Node.js</h3>
 <p>Specify functions in a manifest file (or just an object) and make it available via a Node.js server.</p>
 <pre><code><code class="source-code prettyprint">import ServiceProvider = &quot;node_modules/servingjs/build/ServiceProvider.js&quot;;
+// declare the manifest
 const manifest = {
     // specify your functionality here
     example_function(a, b) {
@@ -49,18 +50,21 @@ const manifest = {
         return a + b;
     }
 };
+// construct the provider
 const service_provider = new ServiceProvider(manifest, {logging: true});
+// create and start server
 const server = service_provider.startServer(8000);</code>
 </code></pre><p>Now <code>service_function</code> is available in the entire network.
 You can simply invoke it by making a request to the server.</p>
 <pre><code><code class="source-code prettyprint">import ServiceClient from &quot;node_modules/servingjs/build/ServiceClient.js&quot;;
-// create the client
+// construct the client
 const service_client = new ServiceClient(&quot;http:localhost:8000&quot;);
 // request the example_function
 const result = await service_client.proxy.example_function(3, 39);
 // reap the results
 console.log(&quot;result of example_function&quot;, result);
-// close the client&apos;s connection (Node.js only)</code>
+// close the client&apos;s connection (only necessary on Node.js)
+service_client.close();</code>
 </code></pre><p>or build the request yourself</p>
 <pre><code><code class="source-code prettyprint">const http2 = require(&quot;http2&quot;);
 // connect

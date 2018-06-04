@@ -22,9 +22,6 @@ function _interopRequireDefault(e) {
     }
 }
 const options = {
-        key: _fs2.default.readFileSync("test/certificate/root-ca.key"),
-        passphrase: "password",
-        cert: _fs2.default.readFileSync("test/certificate/root-ca.crt"),
         allowHTTP1: !0,
         enablePush: !0
     },
@@ -36,9 +33,7 @@ const options = {
 server.on("stream", (e, r) => {
     console.log("here", r)
 });
-const unauthorized_client = _http2.default.connect("https://localhost:9600", {
-    ca: _fs2.default.readFileSync("test/certificate/root-ca.crt")
-});
+const unauthorized_client = _http2.default.connect("http://localhost:9600", {});
 unauthorized_client.on("error", e => {
     console.error(e)
 });
