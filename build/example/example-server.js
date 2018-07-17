@@ -25,15 +25,15 @@ const options = {
         allowHTTP1: !0,
         enablePush: !0
     },
-    test_port = 9600,
+    test_port = 3e3,
     service_provider = new _ServiceProvider2.default(service_manifest, {
         logging: !0
     }),
-    server = service_provider.startServer(9600, options);
+    server = service_provider.startServer(3e3, options);
 server.on("stream", (e, r) => {
     console.log("here", r)
 });
-const unauthorized_client = _http2.default.connect("http://localhost:9600", {});
+const unauthorized_client = _http2.default.connect("http://localhost:3000", {});
 unauthorized_client.on("error", e => {
     console.error(e)
 });

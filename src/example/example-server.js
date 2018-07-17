@@ -8,7 +8,7 @@ const options = {
     allowHTTP1: true,
     enablePush: true
 };
-const test_port = 9600;
+const test_port = 3000;
 const service_provider = new ServiceProvider(service_manifest, {logging: true});
 const server = service_provider.startServer(test_port, options);
 server.on("stream", (stream, headers) => {

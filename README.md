@@ -25,7 +25,7 @@ You can simply invoke it by making a request to the server.
 ```
 import ServiceClient from "node_modules/servingjs/build/ServiceClient.js";
 // construct the client
-const service_client = new ServiceClient("http:localhost:8000");
+const service_client = new ServiceClient("http://localhost:8000");
 // request the example_function
 const result = await service_client.proxy.example_function(3, 39);
 // reap the results

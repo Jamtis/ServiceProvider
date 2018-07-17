@@ -58,7 +58,7 @@ const server = service_provider.startServer(8000);</code>
 You can simply invoke it by making a request to the server.</p>
 <pre><code><code class="source-code prettyprint">import ServiceClient from &quot;node_modules/servingjs/build/ServiceClient.js&quot;;
 // construct the client
-const service_client = new ServiceClient(&quot;http:localhost:8000&quot;);
+const service_client = new ServiceClient(&quot;http://localhost:8000&quot;);
 // request the example_function
 const result = await service_client.proxy.example_function(3, 39);
 // reap the results
@@ -100,7 +100,7 @@ request.end();</code>
 <li>CORS (working on it)</li>
 </ul>
 <h3 id="docs">Docs</h3>
-<p><a href="https://github.com/jamtis/serviceprovider/blob/master/docs/index.html">View the documentation.</a></p>
+<p><a href="https://rawgit.com/Jamtis/ServiceProvider/master/docs/index.html">View the documentation.</a></p>
 <h3 id="license">LICENSE</h3>
 <p>ISC License</p>
 </div>
