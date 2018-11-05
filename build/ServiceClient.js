@@ -37,6 +37,7 @@ class ServiceClient {
             if (200 == r.status) try {
                 return await r.json()
             } catch (e) {
+                if ("" === await r.text()) return;
                 console.warn("Response is not parsable as JSON but server sent HTTP status 200"), console.error(e)
             } else switch (r.status) {
                 case 400:

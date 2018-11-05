@@ -96,8 +96,12 @@ export default class ServiceClient {
                 try {
                     return await response.json();
                 } catch (error) {
-                    console.warn("Response is not parsable as JSON but server sent HTTP status 200");
-                    console.error(error);
+                    if (await response.text() === "") {
+                        return undefined;
+                    } else {
+                        console.warn("Response is not parsable as JSON but server sent HTTP status 200");
+                        console.error(error);
+                    }
                 }
             } else {
                 switch (response.status) {

@@ -107,7 +107,7 @@ export default class ServiceProvider {
         let response_string = "{}";
         try {
             const response_value = await service_function.apply(this.service_manifest, request_data.service_function_arguments);
-            response_string = JSON.stringify(response_value);
+            response_string = JSON.stringify(response_value) || "";
             response.writeHead(200);
             if (this.logging) {
                 console.log("response_string", response_string);
