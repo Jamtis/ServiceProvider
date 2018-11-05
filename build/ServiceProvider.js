@@ -19,7 +19,7 @@ class ServiceProvider {
                 value: e,
                 enumerable: !0
             }
-        }), this.logging = t.logging, "function" == typeof t.isAuthorized && (this.isAuthorized = t.isAuthorized)
+        }), this.logging = t.logging, this.http2 = t.http2, "function" == typeof t.isAuthorized && (this.isAuthorized = t.isAuthorized)
     }
     async handleRequest(e, t) {
         try {
@@ -135,7 +135,7 @@ class ServiceProvider {
         return "function" == typeof t
     }
     startServer(e, t = {}) {
-        const r = require(!1 === t.http2 ? "http" : "http2");
+        const r = require(!1 === this.http2 ? "http" : "http2");
         if (!(t.pfx || t.cert && t.key)) {
             console.warn("insufficient security provided; not using https");
             const i = r.createServer(t, this.handleRequest.bind(this));

@@ -1,6 +1,6 @@
 {
-  "coverage": "100%",
-  "expectCount": 19,
+  "coverage": "95%",
+  "expectCount": 20,
   "actualCount": 19,
   "files": {
     "src/ServiceClient.js": {
@@ -9,9 +9,11 @@
       "undocumentLines": []
     },
     "src/ServiceProvider.js": {
-      "expectCount": 10,
+      "expectCount": 11,
       "actualCount": 10,
-      "undocumentLines": []
+      "undocumentLines": [
+        43
+      ]
     }
   }
 }

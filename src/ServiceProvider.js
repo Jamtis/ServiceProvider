@@ -40,6 +40,7 @@ export default class ServiceProvider {
          * @access public
          * */
         this.logging = options.logging;
+        this.http2 = options.http2;
         if (typeof options.isAuthorized == "function") {
             this.isAuthorized = options.isAuthorized;
         }
@@ -261,7 +262,7 @@ export default class ServiceProvider {
      * @return {http.Http2Server|http.Http2SecureServer} server - the started server instance
      * */
     startServer(port, options = {}) {
-        const http2 = require(options.http2 === false ? "http" : "http2");
+        const http2 = require(this.http2 === false ? "http" : "http2");
         if (!options.pfx && (!options.cert || !options.key)) {
             console.warn("insufficient security provided; not using https");
             const server = http2.createServer(options, this.handleRequest.bind(this));

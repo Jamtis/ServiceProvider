@@ -432,6 +432,12 @@ window.esdocSearchIndex = [
     "method"
   ],
   [
+    "src/serviceprovider.js~serviceprovider#http2",
+    "class/src/ServiceProvider.js~ServiceProvider.html#instance-member-http2",
+    "src/ServiceProvider.js~ServiceProvider#http2",
+    "member"
+  ],
+  [
     "src/serviceprovider.js~serviceprovider#invokeservicefunction",
     "class/src/ServiceProvider.js~ServiceProvider.html#instance-method-invokeServiceFunction",
     "src/ServiceProvider.js~ServiceProvider#invokeServiceFunction",
