@@ -135,7 +135,7 @@ class ServiceProvider {
         return "function" == typeof t
     }
     startServer(e, t = {}) {
-        const r = require("http2");
+        const r = require(!1 === t.http2 ? "http" : "http2");
         if (!(t.pfx || t.cert && t.key)) {
             console.warn("insufficient security provided; not using https");
             const i = r.createServer(t, this.handleRequest.bind(this));
