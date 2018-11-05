@@ -151,7 +151,7 @@ export default class ServiceClient {
                 });
                 request.on("end", () => {
                     try {
-                        const value = JSON.parse(data);
+                        const value = data == "" ? undefined : JSON.parse(data);
                         resolve(value);
                     } catch (error) {
                         console.warn("Response is not parsable as JSON");

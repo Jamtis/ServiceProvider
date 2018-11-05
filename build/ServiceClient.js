@@ -75,7 +75,7 @@ class ServiceClient {
                     i += e
                 }), a.on("end", () => {
                     try {
-                        const e = JSON.parse(i);
+                        const e = "" == i ? void 0 : JSON.parse(i);
                         r(e)
                     } catch (e) {
                         console.warn("Response is not parsable as JSON"), n(new Error("Unknown error"))
