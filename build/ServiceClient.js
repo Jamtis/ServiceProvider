@@ -34,12 +34,15 @@ class ServiceClient {
                     arguments: s
                 })
             }, t.options));
-            if (200 == r.status) try {
-                return await r.json()
-            } catch (e) {
-                if ("" === await r.text()) return;
-                console.warn("Response is not parsable as JSON but server sent HTTP status 200"), console.error(e)
-            } else switch (r.status) {
+            switch (r.status) {
+                case 200:
+                    try {
+                        return await r.json()
+                    } catch (e) {
+                        if ("" === await r.text()) return;
+                        console.warn("Response is not parsable as JSON but server sent HTTP status 200"), console.error(e);
+                        break
+                    }
                 case 400:
                 case 405:
                 case 406:

@@ -92,26 +92,25 @@ export default class ServiceClient {
                     arguments: _arguments
                 })
             }, service_client.options));
-            if (response.status == 200) {
-                try {
-                    return await response.json();
-                } catch (error) {
-                    if (await response.text() === "") {
-                        return undefined;
-                    } else {
-                        console.warn("Response is not parsable as JSON but server sent HTTP status 200");
-                        console.error(error);
+            switch (response.status) {
+                case 200:
+                    try {
+                        return await response.json();
+                    } catch (error) {
+                        if (await response.text() === "") {
+                            return undefined;
+                        } else {
+                            console.warn("Response is not parsable as JSON but server sent HTTP status 200");
+                            console.error(error);
+                            break;
+                        }
                     }
-                }
-            } else {
-                switch (response.status) {
-                    case 400:
-                    case 405:
-                    case 406:
-                        throw new Error("Internal protocol error: HTTP status " + response.status);
-                    case 502:
-                        throw new Error(await response.text());
-                }
+                case 400:
+                case 405:
+                case 406:
+                    throw new Error("Internal protocol error: HTTP status " + response.status);
+                case 502:
+                    throw new Error(await response.text());
             }
             throw new Error("Unknown error: HTTP status " + response.status);
         };

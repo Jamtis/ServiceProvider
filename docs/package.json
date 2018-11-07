@@ -1,6 +1,6 @@
 {
     "name": "servingjs",
-    "version": "3.1.0",
+    "version": "3.1.1",
     "description": "NodeJS server setup providing script functionality per manifest file",
     "main": "gulpfile.js",
     "devDependencies": {
